@@ -5,12 +5,13 @@
 ## 전체 구조
 
 ```text
-fuzzing_engine (Rust)
+fuzzing_engine (Rust + LibAFL)
+  - LibAFL StdFuzzer/QueueScheduler 기반 fuzz loop
   - seed/corpus 선택
   - mutation strategy 선택
   - DOM mutation op sequence 선택
   - action sequence 생성/변이
-  - coverage/crash/metrics 관리
+  - SanCov coverage feedback, crash objective, metrics 관리
 
 dom-generator (Python)
   - DOM IR 생성
@@ -194,12 +195,14 @@ UI-only testcase는 `html_path = null`이고 `initial_url`을 사용합니다.
 ## Rust 모듈 책임
 
 - `actions.rs`: action data model과 JSON wire format.
-- `input.rs`: 한 번 실행할 testcase인 `FuzzInput`.
+- `input.rs`: LibAFL `Input`인 `FuzzInput`.
 - `corpus.rs`: seed 디렉토리 읽기/쓰기.
 - `mutation/`: 모든 mutation 정책.
+- `mutation/libafl_mutator.rs`: mutation 정책을 LibAFL `Mutator`로 연결.
 - `clients/dom_generator.rs`: dom-generator IPC.
 - `clients/simulator.rs`: simulator IPC.
 - `executor.rs`: testcase 실행, coverage/crash artifact 수집.
+- `plain_executor.rs`: simulator harness를 LibAFL `Executor`로 감싸는 adapter.
 - `metrics.rs`: 수치 수집과 avg/p95 계산.
 - `reporting.rs`: 사람이 읽는 실행 상태 출력.
 

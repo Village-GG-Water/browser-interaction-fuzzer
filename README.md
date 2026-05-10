@@ -3,16 +3,16 @@
 `browser-interaction-fuzzer`는 브라우저 취약점을 찾기 위한 새로운 fuzzing 프로젝트입니다.
 
 ```text
-Rust fuzzing engine
+Rust fuzzing engine (LibAFL)
   -> dom-generator에 DOM 문서 생성/변이 요청
   -> user-interaction-simulator에 문서와 action sequence 실행 요청
-  -> SanCov/ASAN 결과를 읽어 coverage, crash, corpus를 갱신
+  -> SanCov/ASAN 결과를 LibAFL feedback과 crash objective에 연결
 ```
 
 ## 구성
 
 ```text
-src/fuzzing_engine/              Rust fuzzing engine
+src/fuzzing_engine/              Rust/LibAFL fuzzing engine
 src/dom-generator/               Python DOM/HTML/CSS/JS generator
 src/user-interaction-simulator/  Python browser interaction runner
 docs/development-guide.md        협업용 개발 문서
@@ -49,6 +49,16 @@ corpus/seeds/seed_000001/
 - `actions.json`: DOM action과 browser UI action을 같은 모델로 저장합니다.
 - `metadata.json`: seed 관리용 설명 정보입니다.
 - `snapshot.html`: 사람이 확인하기 위한 HTML 산출물입니다.
+
+## Fuzzing Engine
+
+Rust engine은 LibAFL 기반입니다.
+
+- `FuzzInput`: LibAFL `Input`입니다. seed 디렉토리의 testcase/actions/document 경로를 한 번 실행할 입력으로 들고 있습니다.
+- `LibAflMutationAdapter`: LibAFL `Mutator`입니다. mutation policy는 Rust가 선택하고, DOM op 적용은 dom-generator에 위임합니다.
+- `PlainExecutor`: simulator 실행 함수를 LibAFL `Executor`로 감쌉니다.
+- `MaxMapFeedback`: SanCov PC를 Rust coverage map에 반영해서 새로운 coverage를 판단합니다.
+- `CrashFeedback`: simulator timeout/crash와 ASAN 결과를 crash objective로 연결합니다.
 
 ## 자주 쓰는 명령
 

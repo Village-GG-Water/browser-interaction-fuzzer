@@ -1,22 +1,38 @@
+use std::cell::RefCell;
 use std::fs;
+use std::num::NonZeroUsize;
 use std::path::{Path, PathBuf};
+use std::rc::Rc;
 use std::sync::{
     Arc,
     atomic::{AtomicBool, Ordering},
 };
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use libafl::corpus::{Corpus, InMemoryCorpus, Testcase};
+use libafl::events::NopEventManager;
+use libafl::executors::ExitKind;
+use libafl::feedbacks::{CrashFeedback, MaxMapFeedback};
+use libafl::fuzzer::{Fuzzer, StdFuzzer};
+use libafl::observers::{HitcountsMapObserver, StdMapObserver};
+use libafl::schedulers::QueueScheduler;
+use libafl::stages::mutational::StdMutationalStage;
+use libafl::state::{HasCorpus, StdState};
+use libafl_bolts::current_nanos;
+use libafl_bolts::rands::StdRand;
+use libafl_bolts::tuples::tuple_list;
+use rand::SeedableRng;
 use rand::rngs::StdRng;
-use rand::{Rng, SeedableRng};
 
 use super::clients::{DomGeneratorClient, DomGeneratorConfig, SimulatorClient, SimulatorConfig};
 use super::config::AppConfig;
 use super::corpus::{CorpusSeed, CorpusStore, SeedMetadata};
-use super::coverage::CoverageTracker;
+use super::coverage::{COVERAGE_MAP, COVERAGE_MAP_SIZE, CoverageTracker};
 use super::executor::{ExecutionOutcome, TestcaseExecutor, save_crash_artifacts};
 use super::input::{DocumentSpec, FuzzInput};
 use super::metrics::RunMetrics;
-use super::mutation::{DefaultMutationStrategy, MutationStrategy};
+use super::mutation::{DefaultMutationStrategy, LibAflMutationAdapter, MutationStrategy};
+use super::plain_executor::PlainExecutor;
 use super::reporting::Reporter;
 use super::{EngineResult, engine_error};
 
@@ -24,7 +40,6 @@ pub struct FuzzingApp {
     config: AppConfig,
     corpus: CorpusStore,
     rng: StdRng,
-    metrics: RunMetrics,
     stop_requested: Arc<AtomicBool>,
 }
 
@@ -36,7 +51,6 @@ impl FuzzingApp {
             config,
             corpus,
             rng: StdRng::from_entropy(),
-            metrics: RunMetrics::default(),
             stop_requested: Arc::new(AtomicBool::new(false)),
         })
     }
@@ -49,52 +63,110 @@ impl FuzzingApp {
             generator_dir: self.config.dom_generator_dir.clone(),
             uv_cache_dir: self.config.uv_cache_dir.clone(),
         };
-        let mut generator = DomGeneratorClient::spawn(&generator_config)?;
+        let mut seed_generator = DomGeneratorClient::spawn(&generator_config)?;
+        let strategy = DefaultMutationStrategy::new();
+        let seeds = self.load_or_create_initial_seeds(&mut seed_generator, &strategy)?;
+        let _ = seed_generator.shutdown();
+
+        let metrics = Rc::new(RefCell::new(RunMetrics::default()));
+        metrics.borrow_mut().corpus_size = seeds.len();
+
         let simulator = SimulatorClient::spawn(&SimulatorConfig::from_app_config(&self.config))?;
-        let mut executor = TestcaseExecutor::new(
+        let mut testcase_executor = TestcaseExecutor::new(
             simulator,
             self.config.sancov_dir.clone(),
             self.config.asan_dir.clone(),
         );
-        let strategy = DefaultMutationStrategy::new();
         let mut coverage = CoverageTracker::new();
+        let corpus_store = self.corpus.clone();
+        let crash_dir = self.config.crash_dir.clone();
+        let harness_metrics = Rc::clone(&metrics);
+        let mut harness_iteration = 0_u64;
 
-        let mut seeds = self.load_or_create_initial_seeds(&mut generator, &strategy)?;
-        self.metrics.corpus_size = seeds.len();
-
-        let mut iteration = 0_u64;
-        loop {
-            if self.should_stop(iteration) {
-                break;
-            }
-            iteration += 1;
-
-            let seed_idx = self.rng.gen_range(0..seeds.len());
-            let input = self.prepare_iteration_input(
-                iteration,
-                &seeds[seed_idx],
-                &strategy,
-                &mut generator,
-            )?;
-
-            let outcome = match executor.run(iteration, &input, &mut coverage) {
-                Ok(outcome) => outcome,
-                Err(error) => {
-                    self.metrics.infra_errors += 1;
-                    eprintln!("[executor] iteration {iteration} failed: {error}");
-                    continue;
+        let harness = move |input: &FuzzInput| -> ExitKind {
+            harness_iteration += 1;
+            match testcase_executor.run(harness_iteration, input, &mut coverage) {
+                Ok(outcome) => {
+                    let exit_kind = if outcome.is_crash() {
+                        ExitKind::Crash
+                    } else {
+                        ExitKind::Ok
+                    };
+                    let mut metrics = harness_metrics.borrow_mut();
+                    if let Err(error) = record_outcome(
+                        &corpus_store,
+                        &crash_dir,
+                        &mut metrics,
+                        harness_iteration,
+                        input,
+                        outcome,
+                    ) {
+                        metrics.infra_errors += 1;
+                        eprintln!(
+                            "[executor] failed to record iteration {harness_iteration}: {error}"
+                        );
+                    }
+                    if metrics.iterations % 10 == 0 {
+                        Reporter::progress(&metrics);
+                    }
+                    exit_kind
                 }
-            };
-
-            self.record_outcome(iteration, &input, outcome, &mut seeds)?;
-
-            if self.metrics.iterations % 10 == 0 {
-                Reporter::progress(&self.metrics);
+                Err(error) => {
+                    let mut metrics = harness_metrics.borrow_mut();
+                    metrics.infra_errors += 1;
+                    eprintln!("[executor] iteration {harness_iteration} failed: {error}");
+                    ExitKind::Ok
+                }
             }
+        };
+
+        let edges_observer = unsafe {
+            HitcountsMapObserver::new(StdMapObserver::from_mut_ptr(
+                "sancov_map",
+                std::ptr::addr_of_mut!(COVERAGE_MAP) as *mut u8,
+                COVERAGE_MAP_SIZE,
+            ))
+        };
+
+        let mut feedback = MaxMapFeedback::new(&edges_observer);
+        let mut objective = CrashFeedback::new();
+        let rng = StdRand::with_seed(current_nanos());
+        let mut state = StdState::new(
+            rng,
+            InMemoryCorpus::<FuzzInput>::new(),
+            InMemoryCorpus::<FuzzInput>::new(),
+            &mut feedback,
+            &mut objective,
+        )?;
+
+        for seed in seeds {
+            state.corpus_mut().add(Testcase::new(seed.input))?;
+        }
+        if state.corpus().count() == 0 {
+            return Err(engine_error("no corpus seeds available"));
         }
 
-        let _ = generator.shutdown();
-        Reporter::summary(&self.metrics);
+        let scheduler = QueueScheduler::new();
+        let mut fuzzer = StdFuzzer::new(scheduler, feedback, objective);
+        let mut manager = NopEventManager::new();
+        let mut executor = PlainExecutor::new(harness, tuple_list!(edges_observer));
+        let mut stages = tuple_list!(StdMutationalStage::with_max_iterations(
+            LibAflMutationAdapter::new(
+                &generator_config,
+                self.config.out_dir.clone(),
+                self.config.max_actions,
+                self.config.seed_actions,
+            )?,
+            NonZeroUsize::new(1).expect("1 is non-zero"),
+        ));
+
+        println!("[libafl] fuzzing started. Press Ctrl+C to stop.");
+        while !self.should_stop(total_executions(&metrics.borrow())) {
+            fuzzer.fuzz_one(&mut stages, &mut executor, &mut state, &mut manager)?;
+            metrics.borrow_mut().corpus_size = state.corpus().count();
+        }
+
+        Reporter::summary(&metrics.borrow());
         Ok(())
     }
 
@@ -161,160 +233,6 @@ impl FuzzingApp {
         )
     }
 
-    fn prepare_iteration_input(
-        &mut self,
-        iteration: u64,
-        seed: &CorpusSeed,
-        strategy: &DefaultMutationStrategy,
-        generator: &mut DomGeneratorClient,
-    ) -> EngineResult<FuzzInput> {
-        let work_dir = self
-            .config
-            .out_dir
-            .join("iterations")
-            .join(format!("{iteration:06}"));
-        fs::create_dir_all(&work_dir)?;
-
-        match &seed.input.document {
-            DocumentSpec::Fdir { path } => {
-                self.prepare_dom_input(iteration, seed, path, &work_dir, strategy, generator)
-            }
-            DocumentSpec::NoDocument { initial_url } => {
-                let mut actions = seed.input.actions.clone();
-                let plan = strategy.plan(&mut self.rng, false);
-                if plan.mutate_actions {
-                    strategy.mutate_actions(
-                        &mut self.rng,
-                        &mut actions,
-                        self.config.max_actions,
-                        &[],
-                    );
-                }
-                Ok(FuzzInput {
-                    seed_id: format!("{}_iter_{iteration:06}", seed.spec.seed_id),
-                    seed_dir: work_dir,
-                    document: DocumentSpec::NoDocument {
-                        initial_url: initial_url.clone(),
-                    },
-                    actions,
-                    snapshot_path: None,
-                })
-            }
-        }
-    }
-
-    fn prepare_dom_input(
-        &mut self,
-        iteration: u64,
-        seed: &CorpusSeed,
-        source_fdir: &Path,
-        work_dir: &Path,
-        strategy: &DefaultMutationStrategy,
-        generator: &mut DomGeneratorClient,
-    ) -> EngineResult<FuzzInput> {
-        let output_fdir = work_dir.join("document.fdir");
-        let snapshot_path = work_dir.join("snapshot.html");
-        let plan = strategy.plan(&mut self.rng, true);
-
-        let doc = if plan.refresh_document {
-            generator.generate_document(Some(&output_fdir))?
-        } else if plan.dom_ops.is_empty() {
-            fs::copy(source_fdir, &output_fdir)?;
-            generator.load_document(&output_fdir)?
-        } else {
-            generator.mutate_document(source_fdir, &output_fdir, &plan.dom_ops)?
-        };
-
-        fs::write(&snapshot_path, &doc.html)?;
-        let mut actions = seed.input.actions.clone();
-        let interactables = doc.interactables;
-        if plan.mutate_actions {
-            strategy.mutate_actions(
-                &mut self.rng,
-                &mut actions,
-                self.config.max_actions,
-                &interactables,
-            );
-        }
-        if actions.is_empty() {
-            actions = strategy.initial_actions(
-                &mut self.rng,
-                self.config.seed_actions,
-                &interactables,
-                &doc.action_hints,
-            );
-        }
-
-        Ok(FuzzInput {
-            seed_id: format!("{}_iter_{iteration:06}", seed.spec.seed_id),
-            seed_dir: work_dir.to_path_buf(),
-            document: DocumentSpec::Fdir { path: output_fdir },
-            actions,
-            snapshot_path: Some(snapshot_path),
-        })
-    }
-
-    fn record_outcome(
-        &mut self,
-        iteration: u64,
-        input: &FuzzInput,
-        outcome: ExecutionOutcome,
-        seeds: &mut Vec<CorpusSeed>,
-    ) -> EngineResult<()> {
-        let response = &outcome.response;
-        self.metrics.record_iteration(
-            input.actions.len(),
-            response.actions_succeeded,
-            response.selector_fallbacks,
-            response.slow_actions,
-            response.timings,
-        );
-
-        if outcome.new_coverage_edges > 0 {
-            let seed_id = self.corpus.next_seed_id("seed_cov_")?;
-            let metadata = SeedMetadata {
-                schema_version: 1,
-                seed_id: seed_id.clone(),
-                created_at: unix_timestamp_string(),
-                source_kind: "coverage".to_string(),
-                generator_version: "dom-generator-v1".to_string(),
-                coverage_edges: Some(outcome.new_coverage_edges as u64),
-                crash_summary: None,
-            };
-            let seed_dir = self.corpus.write_seed(
-                &seed_id,
-                input.document.clone(),
-                &input.actions,
-                &metadata,
-                input.html_path(),
-                document_path_for_copy(input).as_deref(),
-            )?;
-            seeds.push(self.corpus.load_seed(&seed_dir)?);
-            self.metrics.corpus_size = seeds.len();
-            self.metrics.new_coverage_inputs += 1;
-            Reporter::new_coverage(&seed_id, outcome.new_coverage_edges);
-        }
-
-        if outcome.is_crash() {
-            self.metrics.crashes += 1;
-            let case_dir = save_crash_artifacts(
-                &self.config.crash_dir,
-                iteration,
-                input,
-                &input.actions,
-                response,
-                outcome.classified_crash.as_ref(),
-            )?;
-            let crash_name = outcome
-                .crash_type()
-                .map(|kind| kind.as_str())
-                .unwrap_or("unknown");
-            Reporter::crash(iteration, crash_name, &case_dir);
-        }
-
-        Ok(())
-    }
-
     fn install_ctrlc_handler(&self) -> EngineResult<()> {
         let stop_requested = Arc::clone(&self.stop_requested);
         ctrlc::set_handler(move || {
@@ -339,11 +257,75 @@ impl FuzzingApp {
     }
 }
 
+fn record_outcome(
+    corpus: &CorpusStore,
+    crash_dir: &Path,
+    metrics: &mut RunMetrics,
+    iteration: u64,
+    input: &FuzzInput,
+    outcome: ExecutionOutcome,
+) -> EngineResult<()> {
+    let response = &outcome.response;
+    metrics.record_iteration(
+        input.actions.len(),
+        response.actions_succeeded,
+        response.selector_fallbacks,
+        response.slow_actions,
+        response.timings,
+    );
+
+    if outcome.new_coverage_edges > 0 {
+        let seed_id = corpus.next_seed_id("seed_cov_")?;
+        let metadata = SeedMetadata {
+            schema_version: 1,
+            seed_id: seed_id.clone(),
+            created_at: unix_timestamp_string(),
+            source_kind: "coverage".to_string(),
+            generator_version: "dom-generator-v1".to_string(),
+            coverage_edges: Some(outcome.new_coverage_edges as u64),
+            crash_summary: None,
+        };
+        corpus.write_seed(
+            &seed_id,
+            input.document.clone(),
+            &input.actions,
+            &metadata,
+            input.html_path(),
+            document_path_for_copy(input).as_deref(),
+        )?;
+        metrics.new_coverage_inputs += 1;
+        Reporter::new_coverage(&seed_id, outcome.new_coverage_edges);
+    }
+
+    if outcome.is_crash() {
+        metrics.crashes += 1;
+        let case_dir = save_crash_artifacts(
+            crash_dir,
+            iteration,
+            input,
+            &input.actions,
+            response,
+            outcome.classified_crash.as_ref(),
+        )?;
+        let crash_name = outcome
+            .crash_type()
+            .map(|kind| kind.as_str())
+            .unwrap_or("unknown");
+        Reporter::crash(iteration, crash_name, &case_dir);
+    }
+
+    Ok(())
+}
+
 fn document_path_for_copy(input: &FuzzInput) -> Option<PathBuf> {
     match &input.document {
         DocumentSpec::Fdir { path } => Some(path.clone()),
         DocumentSpec::NoDocument { .. } => None,
     }
+}
+
+fn total_executions(metrics: &RunMetrics) -> u64 {
+    metrics.iterations + metrics.infra_errors
 }
 
 fn unix_timestamp_string() -> String {

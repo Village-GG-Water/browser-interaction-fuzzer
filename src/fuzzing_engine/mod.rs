@@ -9,6 +9,7 @@ pub mod executor;
 pub mod input;
 pub mod metrics;
 pub mod mutation;
+pub mod plain_executor;
 pub mod reporting;
 
 pub type EngineResult<T> = Result<T, Box<dyn std::error::Error + Send + Sync>>;

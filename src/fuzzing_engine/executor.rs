@@ -7,7 +7,10 @@ use super::actions::Action;
 use super::clients::{
     RunTestcaseRequest, SimulatorClient, SimulatorResponse, optional_path_string,
 };
-use super::coverage::{CoverageTracker, delete_sancov_files, parse_recent_sancov_dir};
+use super::coverage::{
+    CoverageTracker, delete_sancov_files, parse_recent_sancov_dir, record_pcs_to_coverage_map,
+    reset_coverage_map,
+};
 use super::crash::{ClassifiedCrash, CrashType, find_and_classify_asan_report};
 use super::input::FuzzInput;
 
@@ -58,6 +61,7 @@ impl TestcaseExecutor {
         input: &FuzzInput,
         coverage: &mut CoverageTracker,
     ) -> EngineResult<ExecutionOutcome> {
+        reset_coverage_map();
         let iteration_started = Instant::now();
         let started_at = SystemTime::now();
         let response = self.simulator.run_testcase(RunTestcaseRequest {
@@ -75,6 +79,7 @@ impl TestcaseExecutor {
         let sancov_started = Instant::now();
         let (pcs, parsed_files) = parse_recent_sancov_dir(&self.sancov_dir, started_at)?;
         let sancov_parse_ms = elapsed_ms(sancov_started);
+        record_pcs_to_coverage_map(&pcs);
         let new_coverage_edges = coverage.update(&pcs);
         delete_sancov_files(&parsed_files);
 

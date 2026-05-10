@@ -5,7 +5,8 @@ use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
 const SANCOV_MAGIC: u64 = 0xC0BFFFFFFFFFFF64;
-const DEFAULT_MAP_SIZE: usize = 1 << 26;
+pub const COVERAGE_MAP_SIZE: usize = 1 << 26;
+pub static mut COVERAGE_MAP: [u8; COVERAGE_MAP_SIZE] = [0; COVERAGE_MAP_SIZE];
 
 pub fn parse_sancov_file(path: &Path) -> io::Result<Vec<u64>> {
     let data = fs::read(path)?;
@@ -73,7 +74,7 @@ impl CoverageTracker {
     pub fn new() -> Self {
         Self {
             seen_indices: HashSet::new(),
-            map_len: DEFAULT_MAP_SIZE,
+            map_len: COVERAGE_MAP_SIZE,
         }
     }
 
@@ -86,6 +87,27 @@ impl CoverageTracker {
             }
         }
         new_edges
+    }
+}
+
+pub fn reset_coverage_map() {
+    unsafe {
+        std::ptr::write_bytes(
+            std::ptr::addr_of_mut!(COVERAGE_MAP) as *mut u8,
+            0,
+            COVERAGE_MAP_SIZE,
+        );
+    }
+}
+
+pub fn record_pcs_to_coverage_map(pcs: &[u64]) {
+    unsafe {
+        let base = std::ptr::addr_of_mut!(COVERAGE_MAP) as *mut u8;
+        for &pc in pcs {
+            let idx = coverage_index(pc, COVERAGE_MAP_SIZE);
+            let slot = base.add(idx);
+            *slot = (*slot).saturating_add(1);
+        }
     }
 }
 

@@ -1,17 +1,18 @@
 use std::path::{Path, PathBuf};
 
+use libafl::inputs::Input;
 use serde::{Deserialize, Serialize};
 
 use super::actions::Action;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum InteractionScope {
     Dom,
     BrowserUi,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum DocumentSpec {
     Fdir {
@@ -41,7 +42,7 @@ pub struct TestcaseSpec {
     pub actions_path: PathBuf,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Hash, Serialize, Deserialize)]
 pub struct FuzzInput {
     pub seed_id: String,
     pub seed_dir: PathBuf,
@@ -49,6 +50,8 @@ pub struct FuzzInput {
     pub actions: Vec<Action>,
     pub snapshot_path: Option<PathBuf>,
 }
+
+impl Input for FuzzInput {}
 
 impl FuzzInput {
     pub fn html_path(&self) -> Option<&Path> {

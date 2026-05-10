@@ -28,12 +28,12 @@ use super::clients::{DomGeneratorClient, DomGeneratorConfig, SimulatorClient, Si
 use super::config::AppConfig;
 use super::corpus::{CorpusSeed, CorpusStore, SeedMetadata};
 use super::coverage::{COVERAGE_MAP, COVERAGE_MAP_SIZE, CoverageTracker};
-use super::executor::{ExecutionOutcome, TestcaseExecutor, save_crash_artifacts};
 use super::input::{DocumentSpec, FuzzInput};
+use super::libafl_executor::PlainExecutor;
 use super::metrics::RunMetrics;
 use super::mutation::{DefaultMutationStrategy, LibAflMutationAdapter, MutationStrategy};
-use super::plain_executor::PlainExecutor;
 use super::reporting::Reporter;
+use super::testcase_runner::{ExecutionOutcome, TestcaseRunner, save_crash_artifacts};
 use super::{EngineResult, engine_error};
 
 pub struct FuzzingApp {
@@ -72,7 +72,7 @@ impl FuzzingApp {
         metrics.borrow_mut().corpus_size = seeds.len();
 
         let simulator = SimulatorClient::spawn(&SimulatorConfig::from_app_config(&self.config))?;
-        let mut testcase_executor = TestcaseExecutor::new(
+        let mut testcase_runner = TestcaseRunner::new(
             simulator,
             self.config.sancov_dir.clone(),
             self.config.asan_dir.clone(),
@@ -85,7 +85,7 @@ impl FuzzingApp {
 
         let harness = move |input: &FuzzInput| -> ExitKind {
             harness_iteration += 1;
-            match testcase_executor.run(harness_iteration, input, &mut coverage) {
+            match testcase_runner.run(harness_iteration, input, &mut coverage) {
                 Ok(outcome) => {
                     let exit_kind = if outcome.is_crash() {
                         ExitKind::Crash

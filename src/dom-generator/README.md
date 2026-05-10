@@ -38,9 +38,8 @@ dom-generator/
 │   ├── css/                  # properties, selectors, values, at_rules
 │   ├── js/                   # methods, properties, events, hierarchy
 │   └── svg/                  # elements, attributes, filters
-├── corpus/                   # 수동 변환된 PoC 문서
-│   └── CVE-2025-8882_POC.py  # drag-and-drop UAF PoC
-└── freedom/                  # 원본 Freedom 코드 (참조용)
+└── corpus/                   # 수동 변환된 PoC 문서
+    └── CVE-2025-8882_POC.py  # drag-and-drop UAF PoC
 ```
 
 ---

@@ -99,10 +99,10 @@ impl CorpusStore {
             for entry in fs::read_dir(&self.root)? {
                 let entry = entry?;
                 let name = entry.file_name().to_string_lossy().to_string();
-                if let Some(suffix) = name.strip_prefix(prefix) {
-                    if let Ok(value) = suffix.parse::<u64>() {
-                        next = next.max(value + 1);
-                    }
+                if let Some(suffix) = name.strip_prefix(prefix)
+                    && let Ok(value) = suffix.parse::<u64>()
+                {
+                    next = next.max(value + 1);
                 }
             }
         }

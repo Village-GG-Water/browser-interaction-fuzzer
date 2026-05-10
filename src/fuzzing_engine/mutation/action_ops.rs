@@ -155,25 +155,25 @@ fn random_action_from_metadata<R: Rng + ?Sized>(
     }
 
     let mut weights = Vec::new();
-    weights.extend(std::iter::repeat("click").take(14));
-    weights.extend(std::iter::repeat("hover").take(6));
-    weights.extend(std::iter::repeat("scroll").take(5));
-    weights.extend(std::iter::repeat("key").take(4));
+    weights.extend(std::iter::repeat_n("click", 14));
+    weights.extend(std::iter::repeat_n("hover", 6));
+    weights.extend(std::iter::repeat_n("scroll", 5));
+    weights.extend(std::iter::repeat_n("key", 4));
 
     if interactables.iter().any(|item| item.is_text_input) {
-        weights.extend(std::iter::repeat("type").take(12));
-        weights.extend(std::iter::repeat("clear").take(4));
+        weights.extend(std::iter::repeat_n("type", 12));
+        weights.extend(std::iter::repeat_n("clear", 4));
     }
     if interactables
         .iter()
         .any(|item| item.is_focusable || item.has_handler)
     {
-        weights.extend(std::iter::repeat("focus").take(6));
+        weights.extend(std::iter::repeat_n("focus", 6));
     }
     if interactables.iter().any(|item| item.is_draggable)
         && interactables.iter().any(|item| item.is_drop_target)
     {
-        weights.extend(std::iter::repeat("dragdrop").take(12));
+        weights.extend(std::iter::repeat_n("dragdrop", 12));
     }
 
     match weights[rng.gen_range(0..weights.len())] {

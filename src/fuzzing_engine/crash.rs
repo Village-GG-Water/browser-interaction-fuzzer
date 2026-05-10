@@ -171,19 +171,19 @@ fn hash_stack_trace(asan_log: &str) -> u64 {
             }
         }
 
-        if let Some(stripped) = line.trim().strip_prefix('#') {
-            if let Some(pos) = stripped.find(" in ") {
-                let after = &stripped[pos + 4..];
-                let frame = after
-                    .split_once('(')
-                    .map(|(func, _)| func)
-                    .or_else(|| after.split_once(" D:").map(|(func, _)| func))
-                    .or_else(|| after.split_once(" C:").map(|(func, _)| func))
-                    .unwrap_or(after)
-                    .trim();
-                if !frame.is_empty() && !frame.starts_with("0x") {
-                    frames.push(frame.to_string());
-                }
+        if let Some(stripped) = line.trim().strip_prefix('#')
+            && let Some(pos) = stripped.find(" in ")
+        {
+            let after = &stripped[pos + 4..];
+            let frame = after
+                .split_once('(')
+                .map(|(func, _)| func)
+                .or_else(|| after.split_once(" D:").map(|(func, _)| func))
+                .or_else(|| after.split_once(" C:").map(|(func, _)| func))
+                .unwrap_or(after)
+                .trim();
+            if !frame.is_empty() && !frame.starts_with("0x") {
+                frames.push(frame.to_string());
             }
         }
     }

@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::env;
 use std::fs;
 use std::io;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use super::{EngineResult, engine_error};
 
@@ -144,7 +144,7 @@ fn optional_var(vars: &HashMap<String, String>, key: &str) -> Option<String> {
         .filter(|value| !value.is_empty())
 }
 
-fn path_var(root: &PathBuf, vars: &HashMap<String, String>, key: &str, default: &str) -> PathBuf {
+fn path_var(root: &Path, vars: &HashMap<String, String>, key: &str, default: &str) -> PathBuf {
     let raw = optional_var(vars, key).unwrap_or_else(|| default.to_string());
     let path = PathBuf::from(raw);
     if path.is_absolute() {

@@ -26,7 +26,7 @@
 - fuzz loop는 LibAFL `StdFuzzer`, `QueueScheduler`, `StdMutationalStage`, `Feedback`, `Objective` 경계 위에 유지합니다.
 - raw JSON protocol은 client module 안에 가둡니다.
 - action model은 `actions.rs`, testcase model은 `input.rs`, mutation 정책은 `mutation/`에 둡니다.
-- simulator 실행은 LibAFL `Executor` adapter를 통해 연결합니다. custom while-loop fuzzer로 되돌리지 마세요.
+- simulator 실행은 `libafl_executor.rs`의 LibAFL `Executor` adapter를 통해 연결합니다. `testcase_runner.rs`는 한 testcase 실행 결과에서 ASAN/SanCov/timing을 수집하는 runner입니다. custom while-loop fuzzer로 되돌리지 마세요.
 - 새 mutation 전략은 `mutation/strategy.rs`와 `mutation/scheduler.rs`를 통해 추가합니다.
 - timing, action success, fallback, slow action 같은 병목 분석 값은 `metrics.rs`에 수집하고 `reporting.rs`에서 출력합니다.
 

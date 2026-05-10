@@ -40,13 +40,13 @@ impl ExecutionOutcome {
     }
 }
 
-pub struct TestcaseExecutor {
+pub struct TestcaseRunner {
     simulator: SimulatorClient,
     sancov_dir: PathBuf,
     asan_dir: PathBuf,
 }
 
-impl TestcaseExecutor {
+impl TestcaseRunner {
     pub fn new(simulator: SimulatorClient, sancov_dir: PathBuf, asan_dir: PathBuf) -> Self {
         Self {
             simulator,
@@ -108,10 +108,10 @@ pub fn save_crash_artifacts(
     let case_dir = crash_dir.join(format!("crash_{iteration:06}"));
     fs::create_dir_all(&case_dir)?;
 
-    if let Some(snapshot) = input.html_path() {
-        if snapshot.exists() {
-            fs::copy(snapshot, case_dir.join("snapshot.html"))?;
-        }
+    if let Some(snapshot) = input.html_path()
+        && snapshot.exists()
+    {
+        fs::copy(snapshot, case_dir.join("snapshot.html"))?;
     }
 
     if let Some(document_path) = input.document.relative_path() {

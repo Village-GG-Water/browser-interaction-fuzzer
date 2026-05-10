@@ -57,6 +57,7 @@ Rust engine은 LibAFL 기반입니다.
 - `FuzzInput`: LibAFL `Input`입니다. seed 디렉토리의 testcase/actions/document 경로를 한 번 실행할 입력으로 들고 있습니다.
 - `LibAflMutationAdapter`: LibAFL `Mutator`입니다. mutation policy는 Rust가 선택하고, DOM op 적용은 dom-generator에 위임합니다.
 - `PlainExecutor`: simulator 실행 함수를 LibAFL `Executor`로 감쌉니다.
+- `TestcaseRunner`: simulator 실행 결과에서 ASAN/SanCov artifact, timing, crash 정보를 수집합니다.
 - `MaxMapFeedback`: SanCov PC를 Rust coverage map에 반영해서 새로운 coverage를 판단합니다.
 - `CrashFeedback`: simulator timeout/crash와 ASAN 결과를 crash objective로 연결합니다.
 

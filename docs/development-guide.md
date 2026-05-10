@@ -201,8 +201,8 @@ UI-only testcase는 `html_path = null`이고 `initial_url`을 사용합니다.
 - `mutation/libafl_mutator.rs`: mutation 정책을 LibAFL `Mutator`로 연결.
 - `clients/dom_generator.rs`: dom-generator IPC.
 - `clients/simulator.rs`: simulator IPC.
-- `executor.rs`: testcase 실행, coverage/crash artifact 수집.
-- `plain_executor.rs`: simulator harness를 LibAFL `Executor`로 감싸는 adapter.
+- `testcase_runner.rs`: testcase 실행, coverage/crash artifact 수집.
+- `libafl_executor.rs`: simulator harness를 LibAFL `Executor`로 감싸는 adapter.
 - `metrics.rs`: 수치 수집과 avg/p95 계산.
 - `reporting.rs`: 사람이 읽는 실행 상태 출력.
 

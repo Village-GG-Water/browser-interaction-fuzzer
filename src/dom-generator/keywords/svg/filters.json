@@ -1,0 +1,157 @@
+{
+    "filter_primitives": {
+        "feBlend": {
+            "in": "string",
+            "in2": "string",
+            "mode": "enum:normal|multiply|screen|darken|lighten|overlay|color-dodge|color-burn|hard-light|soft-light|difference|exclusion|hue|saturation|color|luminosity",
+            "result": "string"
+        },
+        "feColorMatrix": {
+            "in": "string",
+            "type": "enum:matrix|saturate|hueRotate|luminanceToAlpha",
+            "values": "string",
+            "result": "string"
+        },
+        "feComponentTransfer": {
+            "in": "string",
+            "result": "string"
+        },
+        "feComposite": {
+            "in": "string",
+            "in2": "string",
+            "operator": "enum:over|in|out|atop|xor|lighter|arithmetic",
+            "k1": "integer",
+            "k2": "integer",
+            "k3": "integer",
+            "k4": "integer",
+            "result": "string"
+        },
+        "feConvolveMatrix": {
+            "in": "string",
+            "order": "integer_optional_integer",
+            "kernelMatrix": "number_list",
+            "divisor": "integer",
+            "bias": "number",
+            "targetX": "integer",
+            "targetY": "integer",
+            "edgeMode": "enum:duplicate|wrap|none",
+            "preserveAlpha": "boolean",
+            "result": "string"
+        },
+        "feDiffuseLighting": {
+            "in": "string",
+            "surfaceScale": "integer",
+            "diffuseConstant": "number",
+            "result": "string"
+        },
+        "feDisplacementMap": {
+            "in": "string",
+            "in2": "string",
+            "scale": "number",
+            "xChannelSelector": "enum:R|G|B|A",
+            "yChannelSelector": "enum:R|G|B|A",
+            "result": "string"
+        },
+        "feDropShadow": {
+            "in": "string",
+            "dx": "number",
+            "dy": "number",
+            "stdDeviation": "number_optional_number",
+            "result": "string"
+        },
+        "feFlood": { "result": "string" },
+        "feGaussianBlur": {
+            "in": "string",
+            "stdDeviation": "number_optional_number",
+            "edgeMode": "enum:duplicate|wrap|none",
+            "result": "string"
+        },
+        "feImage": {
+            "href": "url",
+            "preserveAspectRatio": "string",
+            "result": "string"
+        },
+        "feMerge": { "result": "string" },
+        "feMergeNode": { "in": "string" },
+        "feMorphology": {
+            "in": "string",
+            "operator": "enum:erode|dilate",
+            "radius": "number_optional_number",
+            "result": "string"
+        },
+        "feOffset": {
+            "in": "string",
+            "dx": "number",
+            "dy": "number",
+            "result": "string"
+        },
+        "feSpecularLighting": {
+            "in": "string",
+            "surfaceScale": "integer",
+            "specularConstant": "number",
+            "specularExponent": "integer",
+            "result": "string"
+        },
+        "feTile": { "in": "string", "result": "string" },
+        "feTurbulence": {
+            "baseFrequency": "number_optional_number",
+            "numOctaves": "integer",
+            "seed": "integer",
+            "stitchTiles": "enum:stitch|noStitch",
+            "type": "enum:fractalNoise|turbulence",
+            "result": "string"
+        }
+    },
+    "transfer_function_elements": {
+        "feFuncA": {
+            "type": "enum:identity|table|discrete|linear|gamma",
+            "tableValues": "number_list",
+            "slope": "integer",
+            "intercept": "number",
+            "amplitude": "integer",
+            "exponent": "integer",
+            "offset": "number"
+        },
+        "feFuncB": {
+            "type": "enum:identity|table|discrete|linear|gamma",
+            "tableValues": "number_list",
+            "slope": "integer",
+            "intercept": "number",
+            "amplitude": "integer",
+            "exponent": "integer",
+            "offset": "number"
+        },
+        "feFuncG": {
+            "type": "enum:identity|table|discrete|linear|gamma",
+            "tableValues": "number_list",
+            "slope": "integer",
+            "intercept": "number",
+            "amplitude": "integer",
+            "exponent": "integer",
+            "offset": "number"
+        },
+        "feFuncR": {
+            "type": "enum:identity|table|discrete|linear|gamma",
+            "tableValues": "number_list",
+            "slope": "integer",
+            "intercept": "number",
+            "amplitude": "integer",
+            "exponent": "integer",
+            "offset": "number"
+        }
+    },
+    "light_sources": {
+        "feDistantLight": { "azimuth": "integer", "elevation": "integer" },
+        "fePointLight": { "x": "number", "y": "number", "z": "number" },
+        "feSpotLight": {
+            "x": "number",
+            "y": "number",
+            "z": "number",
+            "pointsAtX": "integer",
+            "pointsAtY": "integer",
+            "pointsAtZ": "integer",
+            "specularExponent": "integer",
+            "limitingConeAngle": "integer"
+        }
+    }
+}

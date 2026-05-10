@@ -1,0 +1,948 @@
+{
+    "properties": {
+        "Node": {
+            "read_only": {
+                "nodeType": "integer",
+                "nodeName": "string",
+                "baseURI": "string",
+                "isConnected": "boolean",
+                "ownerDocument": "document",
+                "parentNode": "element",
+                "parentElement": "element",
+                "childNodes": "node_list",
+                "firstChild": "element",
+                "lastChild": "element",
+                "previousSibling": "element",
+                "nextSibling": "element"
+            },
+            "read_write": {
+                "nodeValue": "string",
+                "textContent": "string"
+            }
+        },
+        "Element": {
+            "read_only": {
+                "attributes": "named_node_map",
+                "children": "html_collection",
+                "firstElementChild": "element",
+                "lastElementChild": "element",
+                "childElementCount": "integer",
+                "namespaceURI": "string",
+                "prefix": "string",
+                "localName": "string",
+                "tagName": "string",
+                "id": "string",
+                "classList": "dom_token_list",
+                "shadowRoot": "shadow_root",
+                "scrollWidth": "integer",
+                "scrollHeight": "integer",
+                "clientTop": "integer",
+                "clientLeft": "integer",
+                "clientWidth": "integer",
+                "clientHeight": "integer",
+                "previousElementSibling": "element",
+                "nextElementSibling": "element",
+                "computedRole": "string",
+                "computedName": "string"
+            },
+            "read_write": {
+                "className": "string",
+                "innerHTML": "string",
+                "outerHTML": "string",
+                "slot": "string",
+                "scrollTop": "integer",
+                "scrollLeft": "integer"
+            }
+        },
+        "HTMLElement": {
+            "read_only": {
+                "isContentEditable": "boolean",
+                "offsetParent": "element",
+                "offsetTop": "integer",
+                "offsetLeft": "integer",
+                "offsetWidth": "integer",
+                "offsetHeight": "integer",
+                "dataset": "dom_string_map",
+                "style": "css_style_declaration"
+            },
+            "read_write": {
+                "accessKey": "string",
+                "autocapitalize": "string",
+                "contentEditable": "string",
+                "dir": "string",
+                "draggable": "boolean",
+                "hidden": "boolean",
+                "innerText": "string",
+                "lang": "string",
+                "outerText": "string",
+                "spellcheck": "boolean",
+                "tabIndex": "integer",
+                "title": "string",
+                "translate": "boolean"
+            }
+        },
+        "Document": {
+            "read_only": {
+                "domain": "string",
+                "referrer": "string",
+                "defaultView": "window",
+                "currentScript": "element",
+                "documentElement": "element",
+                "fonts": "font_face_set",
+                "all": "html_all_collection",
+                "timeline": "animation_timeline",
+                "scrollingElement": "element",
+                "images": "html_collection",
+                "embeds": "html_collection",
+                "plugins": "html_collection",
+                "links": "html_collection",
+                "forms": "html_collection",
+                "anchors": "html_collection",
+                "scripts": "html_collection",
+                "applets": "html_collection",
+                "doctype": "document_type",
+                "implementation": "dom_implementation",
+                "URL": "string",
+                "documentURI": "string",
+                "origin": "string",
+                "compatMode": "string",
+                "characterSet": "string",
+                "contentType": "string",
+                "lastModified": "string",
+                "readyState": "string",
+                "hidden": "boolean",
+                "visibilityState": "string",
+                "fullscreenEnabled": "boolean",
+                "fullscreenElement": "element"
+            },
+            "read_write": {
+                "title": "string",
+                "dir": "string",
+                "designMode": "string",
+                "fgColor": "string",
+                "linkColor": "string",
+                "vlinkColor": "string",
+                "alinkColor": "string",
+                "bgColor": "string",
+                "cookie": "string"
+            }
+        },
+        "DocumentOrShadowRoot": {
+            "read_only": {
+                "pointerLockElement": "element",
+                "activeElement": "element"
+            }
+        },
+        "Window": {
+            "read_only": {
+                "top": "window",
+                "self": "window",
+                "window": "window",
+                "frames": "window",
+                "opener": "window",
+                "parent": "window",
+                "document": "document",
+                "closed": "boolean",
+                "length": "integer",
+                "screen": "screen",
+                "history": "history",
+                "frameElement": "element",
+                "navigator": "navigator",
+                "innerWidth": "integer",
+                "innerHeight": "integer",
+                "scrollX": "integer",
+                "scrollY": "integer",
+                "pageXOffset": "integer",
+                "pageYOffset": "integer",
+                "screenX": "integer",
+                "screenY": "integer",
+                "outerWidth": "integer",
+                "outerHeight": "integer",
+                "devicePixelRatio": "float",
+                "locationbar": "bar_prop",
+                "menubar": "bar_prop",
+                "personalbar": "bar_prop",
+                "scrollbars": "bar_prop",
+                "statusbar": "bar_prop",
+                "toolbar": "bar_prop",
+                "visualViewport": "visual_viewport",
+                "applicationCache": "application_cache",
+                "customElements": "custom_element_registry",
+                "isSecureContext": "boolean"
+            },
+            "read_write": {
+                "name": "string",
+                "status": "string",
+                "defaultStatus": "string"
+            }
+        },
+        "ShadowRoot": {
+            "read_only": {
+                "mode": "string",
+                "delegatesFocus": "boolean",
+                "host": "element"
+            },
+            "read_write": {
+                "innerHTML": "string"
+            }
+        },
+        "CharacterData": {
+            "read_only": {
+                "length": "integer"
+            },
+            "read_write": {
+                "data": "string"
+            }
+        },
+        "Text": {
+            "read_only": {
+                "wholeText": "string",
+                "assignedSlot": "element"
+            }
+        },
+        "Attr": {
+            "read_only": {
+                "namespaceURI": "string",
+                "prefix": "string",
+                "localName": "string",
+                "name": "string",
+                "specified": "boolean",
+                "ownerElement": "element"
+            },
+            "read_write": {
+                "value": "string"
+            }
+        },
+        "NodeIterator": {
+            "read_only": {
+                "root": "element",
+                "referenceNode": "element",
+                "pointerBeforeReferenceNode": "boolean",
+                "whatToShow": "integer",
+                "filter": "node_filter"
+            }
+        },
+        "TreeWalker": {
+            "read_only": {
+                "root": "element",
+                "whatToShow": "integer",
+                "filter": "node_filter"
+            },
+            "read_write": {
+                "currentNode": "element"
+            }
+        },
+        "Selection": {
+            "read_only": {
+                "anchorNode": "element",
+                "anchorOffset": "integer",
+                "focusNode": "element",
+                "focusOffset": "integer",
+                "isCollapsed": "boolean",
+                "rangeCount": "integer",
+                "type": "string"
+            }
+        },
+        "CSSStyleDeclaration": {
+            "read_only": {
+                "length": "integer",
+                "parentRule": "css_rule"
+            },
+            "read_write": {
+                "cssFloat": "string",
+                "cssText": "string"
+            }
+        },
+        "CSSStyleRule": {
+            "read_only": {
+                "style": "css_style_declaration"
+            },
+            "read_write": {
+                "cssText": "string",
+                "selectorText": "string"
+            }
+        },
+        "CSSStyleSheet": {
+            "read_only": {
+                "cssRules": "css_rule_list",
+                "ownerRule": "css_rule"
+            }
+        },
+        "CSSKeyframesRule": {
+            "read_only": {
+                "name": "string",
+                "cssRules": "css_rule_list"
+            }
+        },
+        "CSSKeyframeRule": {
+            "read_only": {
+                "style": "css_style_declaration"
+            },
+            "read_write": {
+                "keyText": "string",
+                "cssText": "string"
+            }
+        },
+        "StyleSheet": {
+            "read_only": {
+                "type": "string",
+                "href": "string",
+                "ownerNode": "element",
+                "parentStyleSheet": "style_sheet",
+                "title": "string",
+                "media": "media_list"
+            },
+            "read_write": {
+                "disabled": "boolean"
+            }
+        },
+        "MediaQueryList": {
+            "read_only": {
+                "media": "string",
+                "matches": "boolean"
+            },
+            "read_write": {
+                "onchange": "event_handler"
+            }
+        },
+        "MediaList": {
+            "read_only": {
+                "length": "integer"
+            },
+            "read_write": {
+                "mediaText": "string"
+            }
+        },
+        "FontFaceSet": {
+            "read_only": {
+                "size": "integer",
+                "status": "string"
+            },
+            "read_write": {
+                "onloading": "event_handler",
+                "onloadingdone": "event_handler",
+                "onloadingerror": "event_handler"
+            }
+        },
+        "FontFace": {
+            "read_only": {
+                "status": "string"
+            },
+            "read_write": {
+                "family": "string",
+                "style": "string",
+                "weight": "string",
+                "stretch": "string",
+                "unicodeRange": "string",
+                "variant": "string",
+                "featureSettings": "string"
+            }
+        },
+        "HTMLAnchorElement": {
+            "read_write": {
+                "charset": "string",
+                "coords": "string",
+                "shape": "string",
+                "target": "string",
+                "text": "string",
+                "ping": "string",
+                "rel": "string",
+                "href": "string",
+                "hreflang": "string",
+                "rev": "string"
+            }
+        },
+        "HTMLAreaElement": {
+            "read_write": {
+                "alt": "string",
+                "coords": "string",
+                "noHref": "boolean",
+                "shape": "string",
+                "target": "string",
+                "href": "string",
+                "ping": "string"
+            }
+        },
+        "HTMLMediaElement": {
+            "read_only": {
+                "buffered": "time_ranges",
+                "currentSrc": "string",
+                "duration": "float",
+                "ended": "boolean",
+                "error": "media_error",
+                "networkState": "integer",
+                "paused": "boolean",
+                "played": "time_ranges",
+                "readyState": "integer",
+                "seekable": "time_ranges",
+                "seeking": "boolean",
+                "textTracks": "text_track_list",
+                "audioTracks": "audio_track_list",
+                "videoTracks": "video_track_list"
+            },
+            "read_write": {
+                "autoplay": "boolean",
+                "controls": "boolean",
+                "crossOrigin": "string",
+                "currentTime": "float",
+                "defaultPlaybackRate": "float",
+                "loop": "boolean",
+                "muted": "boolean",
+                "playbackRate": "float",
+                "preload": "string",
+                "src": "string",
+                "volume": "float",
+                "defaultMuted": "boolean"
+            }
+        },
+        "HTMLButtonElement": {
+            "read_only": {
+                "form": "element",
+                "labels": "node_list",
+                "validationMessage": "string",
+                "validity": "validity_state",
+                "willValidate": "boolean"
+            },
+            "read_write": {
+                "autofocus": "boolean",
+                "disabled": "boolean",
+                "formEnctype": "string",
+                "formMethod": "string",
+                "formNoValidate": "boolean",
+                "formTarget": "string",
+                "name": "string",
+                "type": "string",
+                "value": "string"
+            }
+        },
+        "HTMLCanvasElement": {
+            "read_write": {
+                "height": "integer",
+                "width": "integer"
+            }
+        },
+        "HTMLDivElement": {
+            "read_write": { "align": "string" }
+        },
+        "HTMLFormElement": {
+            "read_only": {
+                "elements": "html_form_controls_collection",
+                "length": "integer"
+            },
+            "read_write": {
+                "acceptCharset": "string",
+                "action": "string",
+                "autocomplete": "string",
+                "encoding": "string",
+                "enctype": "string",
+                "method": "string",
+                "name": "string",
+                "noValidate": "boolean",
+                "target": "string"
+            }
+        },
+        "HTMLIFrameElement": {
+            "read_only": {
+                "contentDocument": "document",
+                "contentWindow": "window",
+                "sandbox": "dom_token_list"
+            },
+            "read_write": {
+                "src": "string",
+                "srcdoc": "string",
+                "name": "string",
+                "width": "string",
+                "height": "string"
+            }
+        },
+        "HTMLImageElement": {
+            "read_only": {
+                "complete": "boolean",
+                "currentSrc": "string",
+                "naturalHeight": "integer",
+                "naturalWidth": "integer",
+                "x": "integer",
+                "y": "integer"
+            },
+            "read_write": {
+                "alt": "string",
+                "crossOrigin": "string",
+                "decoding": "string",
+                "height": "integer",
+                "isMap": "boolean",
+                "loading": "string",
+                "sizes": "string",
+                "src": "string",
+                "srcset": "string",
+                "useMap": "string",
+                "width": "integer"
+            }
+        },
+        "HTMLInputElement": {
+            "read_only": {
+                "form": "element",
+                "labels": "node_list",
+                "list": "element",
+                "validationMessage": "string",
+                "validity": "validity_state",
+                "willValidate": "boolean"
+            },
+            "read_write": {
+                "accept": "string",
+                "alt": "string",
+                "autocomplete": "string",
+                "autofocus": "boolean",
+                "checked": "boolean",
+                "defaultChecked": "boolean",
+                "defaultValue": "string",
+                "disabled": "boolean",
+                "files": "file_list",
+                "formEnctype": "string",
+                "formMethod": "string",
+                "formNoValidate": "boolean",
+                "formTarget": "string",
+                "height": "integer",
+                "indeterminate": "boolean",
+                "max": "string",
+                "maxLength": "integer",
+                "min": "string",
+                "minLength": "integer",
+                "multiple": "boolean",
+                "name": "string",
+                "pattern": "string",
+                "placeholder": "string",
+                "readOnly": "boolean",
+                "required": "boolean",
+                "selectionDirection": "string",
+                "selectionEnd": "integer",
+                "selectionStart": "integer",
+                "size": "integer",
+                "src": "string",
+                "step": "string",
+                "type": "string",
+                "value": "string",
+                "valueAsNumber": "float",
+                "width": "integer"
+            }
+        },
+        "HTMLSelectElement": {
+            "read_only": {
+                "form": "element",
+                "labels": "node_list",
+                "options": "html_options_collection",
+                "selectedOptions": "html_collection",
+                "type": "string",
+                "validationMessage": "string",
+                "validity": "validity_state",
+                "willValidate": "boolean"
+            },
+            "read_write": {
+                "autofocus": "boolean",
+                "disabled": "boolean",
+                "length": "integer",
+                "multiple": "boolean",
+                "name": "string",
+                "required": "boolean",
+                "selectedIndex": "integer",
+                "size": "integer",
+                "value": "string"
+            }
+        },
+        "HTMLTextAreaElement": {
+            "read_only": {
+                "form": "element",
+                "labels": "node_list",
+                "textLength": "integer",
+                "type": "string",
+                "validationMessage": "string",
+                "validity": "validity_state",
+                "willValidate": "boolean"
+            },
+            "read_write": {
+                "autocomplete": "string",
+                "autofocus": "boolean",
+                "cols": "integer",
+                "defaultValue": "string",
+                "disabled": "boolean",
+                "maxLength": "integer",
+                "minLength": "integer",
+                "name": "string",
+                "placeholder": "string",
+                "readOnly": "boolean",
+                "required": "boolean",
+                "rows": "integer",
+                "selectionDirection": "string",
+                "selectionEnd": "integer",
+                "selectionStart": "integer",
+                "value": "string",
+                "wrap": "string"
+            }
+        },
+        "HTMLTableElement": {
+            "read_only": {
+                "rows": "html_collection",
+                "tBodies": "html_collection"
+            },
+            "read_write": {
+                "caption": "element",
+                "tHead": "element",
+                "tFoot": "element",
+                "align": "string",
+                "bgColor": "string",
+                "border": "string",
+                "cellPadding": "string",
+                "cellSpacing": "string",
+                "frame": "string",
+                "rules": "string",
+                "summary": "string",
+                "width": "string"
+            }
+        },
+        "HTMLTableRowElement": {
+            "read_only": {
+                "cells": "html_collection",
+                "rowIndex": "integer",
+                "sectionRowIndex": "integer"
+            },
+            "read_write": {
+                "align": "string",
+                "bgColor": "string",
+                "ch": "string",
+                "chOff": "string",
+                "vAlign": "string"
+            }
+        },
+        "HTMLVideoElement": {
+            "read_only": {
+                "videoHeight": "integer",
+                "videoWidth": "integer"
+            },
+            "read_write": {
+                "height": "integer",
+                "poster": "string",
+                "width": "integer"
+            }
+        },
+        "HTMLDialogElement": {
+            "read_write": {
+                "open": "boolean",
+                "returnValue": "string"
+            }
+        },
+        "HTMLDetailsElement": {
+            "read_write": { "open": "boolean" }
+        },
+        "HTMLLabelElement": {
+            "read_only": { "control": "element", "form": "element" },
+            "read_write": { "htmlFor": "string" }
+        },
+        "HTMLOptionElement": {
+            "read_only": { "form": "element", "index": "integer" },
+            "read_write": {
+                "defaultSelected": "boolean",
+                "disabled": "boolean",
+                "label": "string",
+                "selected": "boolean",
+                "text": "string",
+                "value": "string"
+            }
+        },
+        "HTMLStyleElement": {
+            "read_write": {
+                "disabled": "boolean",
+                "media": "string",
+                "type": "string"
+            }
+        },
+        "HTMLLinkElement": {
+            "read_only": { "sheet": "style_sheet" },
+            "read_write": {
+                "disabled": "boolean",
+                "href": "string",
+                "hreflang": "string",
+                "media": "string",
+                "rel": "string",
+                "sizes": "dom_token_list",
+                "type": "string"
+            }
+        },
+        "HTMLObjectElement": {
+            "read_only": {
+                "contentDocument": "document",
+                "contentWindow": "window",
+                "form": "element",
+                "validationMessage": "string",
+                "validity": "validity_state",
+                "willValidate": "boolean"
+            },
+            "read_write": {
+                "data": "string",
+                "height": "string",
+                "name": "string",
+                "type": "string",
+                "useMap": "string",
+                "width": "string"
+            }
+        },
+        "HTMLEmbedElement": {
+            "read_write": {
+                "height": "string",
+                "src": "string",
+                "type": "string",
+                "width": "string"
+            }
+        },
+        "HTMLSourceElement": {
+            "read_write": {
+                "media": "string",
+                "sizes": "string",
+                "src": "string",
+                "srcset": "string",
+                "type": "string"
+            }
+        },
+        "HTMLTrackElement": {
+            "read_only": { "readyState": "integer", "track": "text_track" },
+            "read_write": {
+                "default": "boolean",
+                "kind": "string",
+                "label": "string",
+                "src": "string",
+                "srclang": "string"
+            }
+        },
+        "SVGElement": {
+            "read_only": {
+                "ownerSVGElement": "svg_element",
+                "viewportElement": "svg_element",
+                "style": "css_style_declaration",
+                "dataset": "dom_string_map"
+            },
+            "read_write": {
+                "tabIndex": "integer"
+            }
+        },
+        "SVGSVGElement": {
+            "read_only": {
+                "viewport": "svg_rect",
+                "useCurrentView": "boolean",
+                "currentView": "svg_view_spec"
+            },
+            "read_write": {
+                "currentScale": "float"
+            }
+        },
+        "SVGGraphicsElement": {
+            "read_only": {
+                "transform": "svg_animated_transform_list",
+                "farthestViewportElement": "svg_element",
+                "nearestViewportElement": "svg_element"
+            }
+        },
+        "SVGCircleElement": {
+            "read_only": {
+                "cx": "svg_animated_length",
+                "cy": "svg_animated_length",
+                "r": "svg_animated_length"
+            }
+        },
+        "SVGEllipseElement": {
+            "read_only": {
+                "cx": "svg_animated_length",
+                "cy": "svg_animated_length",
+                "rx": "svg_animated_length",
+                "ry": "svg_animated_length"
+            }
+        },
+        "SVGRectElement": {
+            "read_only": {
+                "height": "svg_animated_length",
+                "width": "svg_animated_length",
+                "x": "svg_animated_length",
+                "y": "svg_animated_length",
+                "rx": "svg_animated_length",
+                "ry": "svg_animated_length"
+            }
+        },
+        "SVGLineElement": {
+            "read_only": {
+                "x1": "svg_animated_length",
+                "x2": "svg_animated_length",
+                "y1": "svg_animated_length",
+                "y2": "svg_animated_length"
+            }
+        },
+        "SVGImageElement": {
+            "read_only": {
+                "height": "svg_animated_length",
+                "width": "svg_animated_length",
+                "x": "svg_animated_length",
+                "y": "svg_animated_length",
+                "preserveAspectRatio": "svg_animated_preserve_aspect_ratio"
+            }
+        },
+        "SVGUseElement": {
+            "read_only": {
+                "height": "svg_animated_length",
+                "width": "svg_animated_length",
+                "x": "svg_animated_length",
+                "y": "svg_animated_length"
+            }
+        },
+        "SVGFilterElement": {
+            "read_only": {
+                "filterUnits": "svg_animated_enumeration",
+                "primitiveUnits": "svg_animated_enumeration",
+                "height": "svg_animated_length",
+                "width": "svg_animated_length",
+                "x": "svg_animated_length",
+                "y": "svg_animated_length"
+            }
+        },
+        "SVGMarkerElement": {
+            "read_only": {
+                "orientAngle": "svg_animated_angle",
+                "markerUnits": "svg_animated_enumeration",
+                "orientType": "svg_animated_enumeration",
+                "markerHeight": "svg_animated_length",
+                "markerWidth": "svg_animated_length",
+                "refX": "svg_animated_length",
+                "refY": "svg_animated_length"
+            }
+        },
+        "SVGMaskElement": {
+            "read_only": {
+                "maskContentUnits": "svg_animated_enumeration",
+                "maskUnits": "svg_animated_enumeration",
+                "height": "svg_animated_length",
+                "width": "svg_animated_length",
+                "x": "svg_animated_length",
+                "y": "svg_animated_length"
+            }
+        },
+        "SVGPatternElement": {
+            "read_only": {
+                "patternContentUnits": "svg_animated_enumeration",
+                "patternUnits": "svg_animated_enumeration",
+                "height": "svg_animated_length",
+                "width": "svg_animated_length",
+                "x": "svg_animated_length",
+                "y": "svg_animated_length",
+                "patternTransform": "svg_animated_transform_list"
+            }
+        },
+        "SVGLinearGradientElement": {
+            "read_only": {
+                "x1": "svg_animated_length",
+                "x2": "svg_animated_length",
+                "y1": "svg_animated_length",
+                "y2": "svg_animated_length"
+            }
+        },
+        "SVGRadialGradientElement": {
+            "read_only": {
+                "cx": "svg_animated_length",
+                "cy": "svg_animated_length",
+                "fr": "svg_animated_length",
+                "fx": "svg_animated_length",
+                "fy": "svg_animated_length",
+                "r": "svg_animated_length"
+            }
+        },
+        "SVGGradientElement": {
+            "read_only": {
+                "gradientUnits": "svg_animated_enumeration",
+                "spreadMethod": "svg_animated_enumeration",
+                "gradientTransform": "svg_animated_transform_list"
+            }
+        },
+        "SVGStopElement": {
+            "read_only": { "offset": "svg_animated_number" }
+        },
+        "SVGMatrix": {
+            "read_write": {
+                "a": "float",
+                "b": "float",
+                "c": "float",
+                "d": "float",
+                "e": "float",
+                "f": "float"
+            }
+        },
+        "SVGPoint": {
+            "read_write": { "x": "float", "y": "float" }
+        },
+        "SVGRect": {
+            "read_write": {
+                "height": "float",
+                "width": "float",
+                "x": "float",
+                "y": "float"
+            }
+        },
+        "SVGLength": {
+            "read_only": { "unitType": "integer" },
+            "read_write": {
+                "value": "float",
+                "valueAsString": "string",
+                "valueInSpecifiedUnits": "float"
+            }
+        },
+        "SVGAngle": {
+            "read_only": { "unitType": "integer" },
+            "read_write": {
+                "value": "float",
+                "valueAsString": "string",
+                "valueInSpecifiedUnits": "float"
+            }
+        },
+        "SVGNumber": {
+            "read_write": { "value": "float" }
+        },
+        "SVGTransform": {
+            "read_only": {
+                "matrix": "svg_matrix",
+                "angle": "float",
+                "type": "integer"
+            }
+        },
+        "SVGAnimatedBoolean": {
+            "read_only": { "animVal": "boolean" },
+            "read_write": { "baseVal": "boolean" }
+        },
+        "SVGAnimatedEnumeration": {
+            "read_only": { "animVal": "integer" },
+            "read_write": { "baseVal": "integer" }
+        },
+        "SVGAnimatedInteger": {
+            "read_only": { "animVal": "integer" },
+            "read_write": { "baseVal": "integer" }
+        },
+        "SVGAnimatedNumber": {
+            "read_only": { "animVal": "float" },
+            "read_write": { "baseVal": "float" }
+        },
+        "SVGAnimatedString": {
+            "read_only": { "animVal": "string" },
+            "read_write": { "baseVal": "string" }
+        },
+        "SVGPreserveAspectRatio": {
+            "read_write": { "align": "integer", "meetOrSlice": "integer" }
+        },
+        "SVGPathElement": {
+            "read_only": {
+                "pathLength": "svg_animated_number",
+                "pathSegList": "svg_path_seg_list"
+            }
+        },
+        "SVGTextContentElement": {
+            "read_only": {
+                "lengthAdjust": "svg_animated_enumeration",
+                "textLength": "svg_animated_length"
+            }
+        },
+        "SVGAnimationElement": {
+            "read_only": { "targetElement": "svg_element" }
+        }
+    }
+}

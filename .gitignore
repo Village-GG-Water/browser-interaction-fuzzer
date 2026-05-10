@@ -1,0 +1,21 @@
+# Rust build outputs
+/target/
+/_build/
+
+# Runtime artifacts
+/out/
+/crashes/
+/corpus/
+
+# Python environments and caches
+/.venv/
+__pycache__/
+*.pyc
+
+# Local environment
+.env
+
+# OS/editor noise
+Thumbs.db
+.DS_Store
+/.vscode/

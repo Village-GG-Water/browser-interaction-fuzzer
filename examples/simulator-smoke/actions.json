@@ -1,0 +1,51 @@
+[
+  {
+    "kind": "click",
+    "target": {
+      "space": "dom",
+      "selector": "#click-target"
+    }
+  },
+  {
+    "kind": "type_text",
+    "target": {
+      "space": "dom",
+      "selector": "#name-input"
+    },
+    "text": "simulator smoke"
+  },
+  {
+    "kind": "focus",
+    "target": {
+      "space": "dom",
+      "selector": "#note-input"
+    }
+  },
+  {
+    "kind": "type_text",
+    "target": {
+      "space": "dom",
+      "selector": "#note-input"
+    },
+    "text": "hello from actions.json"
+  },
+  {
+    "kind": "drag_drop",
+    "target": {
+      "space": "dom",
+      "selector": "#drag-source"
+    },
+    "to": {
+      "space": "dom",
+      "selector": "#drop-target"
+    }
+  },
+  {
+    "kind": "press_key",
+    "key": "Tab"
+  },
+  {
+    "kind": "sleep",
+    "millis": 100
+  }
+]

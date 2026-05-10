@@ -1,0 +1,196 @@
+{
+    "color": {
+        "keywords": [
+            "currentColor",
+            "transparent",
+            "red",
+            "blue",
+            "green",
+            "black",
+            "white"
+        ],
+        "functions": ["rgb()", "rgba()"],
+        "hex": ["#RRGGBB", "#RRGGBBAA"]
+    },
+    "length": {
+        "units": ["px", "em", "vw", "vh", "vmin", "vmax"],
+        "relative_units": ["vw", "vh", "vmin", "vmax"]
+    },
+    "percentage": {
+        "format": "<number>%"
+    },
+    "angle": {
+        "units": ["deg"]
+    },
+    "time": {
+        "units": ["s", "ms"]
+    },
+    "line-width": {
+        "keywords": ["thin", "medium", "thick"]
+    },
+    "line-style": {
+        "keywords": [
+            "hidden",
+            "dotted",
+            "dashed",
+            "solid",
+            "double",
+            "groove",
+            "ridge",
+            "inset",
+            "outset"
+        ]
+    },
+    "timing-function": {
+        "keywords": ["linear", "ease", "ease-in", "ease-out", "ease-in-out"],
+        "functions": ["cubic-bezier()", "steps()"],
+        "step_positions": [
+            "jump-start",
+            "jump-end",
+            "jump-none",
+            "jump-both",
+            "start",
+            "end"
+        ]
+    },
+    "filter-function": {
+        "functions": [
+            "blur()",
+            "brightness()",
+            "contrast()",
+            "drop-shadow()",
+            "grayscale()",
+            "hue-rotate()",
+            "invert()",
+            "opacity()",
+            "saturate()",
+            "sepia()"
+        ]
+    },
+    "transform-function": {
+        "functions": [
+            "matrix()",
+            "translate()",
+            "translateX()",
+            "translateY()",
+            "translateZ()",
+            "translate3d()",
+            "scale()",
+            "scaleX()",
+            "scaleY()",
+            "scaleZ()",
+            "scale3d()",
+            "rotate()",
+            "rotateX()",
+            "rotateY()",
+            "rotateZ()",
+            "rotate3d()",
+            "skew()",
+            "skewX()",
+            "skewY()",
+            "matrix3d()",
+            "perspective()"
+        ]
+    },
+    "image": {
+        "types": [
+            "url()",
+            "linear-gradient()",
+            "repeating-linear-gradient()",
+            "radial-gradient()",
+            "repeating-radial-gradient()",
+            "conic-gradient()"
+        ]
+    },
+    "position": {
+        "keywords": ["left", "center", "right", "top", "bottom"]
+    },
+    "basic-shape": {
+        "functions": ["inset()", "circle()", "ellipse()", "polygon()", "path()"]
+    },
+    "geometry-box": {
+        "keywords": [
+            "margin-box",
+            "border-box",
+            "padding-box",
+            "content-box",
+            "fill-box",
+            "stroke-box",
+            "view-box"
+        ]
+    },
+    "blend-mode": {
+        "keywords": [
+            "normal",
+            "multiply",
+            "screen",
+            "overlay",
+            "darken",
+            "lighten",
+            "color-dodge",
+            "color-burn",
+            "hard-light",
+            "soft-light",
+            "difference",
+            "exclusion",
+            "hue",
+            "saturation",
+            "color",
+            "luminosity"
+        ]
+    },
+    "font-family": {
+        "generic": ["monospace", "sans-serif", "serif", "system-ui"],
+        "named": [
+            "Consolas",
+            "Menlo",
+            "Courier",
+            "Times",
+            "Arial",
+            "Helvetica",
+            "Verdana",
+            "Courier New",
+            "Comic Sans MS",
+            "Times New Roman"
+        ]
+    },
+    "cursor": {
+        "keywords": [
+            "auto",
+            "default",
+            "context-menu",
+            "help",
+            "pointer",
+            "progress",
+            "wait",
+            "cell",
+            "crosshair",
+            "text",
+            "vertical-text",
+            "alias",
+            "copy",
+            "move",
+            "no-drop",
+            "not-allowed",
+            "e-resize",
+            "n-resize",
+            "ne-resize",
+            "nw-resize",
+            "s-resize",
+            "se-resize",
+            "sw-resize",
+            "w-resize",
+            "ew-resize",
+            "ns-resize",
+            "nesw-resize",
+            "nwse-resize",
+            "col-resize",
+            "row-resize",
+            "all-scroll",
+            "zoom-in",
+            "zoom-out",
+            "grab",
+            "grabbing"
+        ]
+    }
+}

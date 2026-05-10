@@ -1,0 +1,1589 @@
+{
+    "methods": {
+        "Document": [
+            {
+                "name": "createElement",
+                "args": [{ "type": "tag" }],
+                "return": "element"
+            },
+            {
+                "name": "createElementNS",
+                "args": [{ "type": "string" }, { "type": "string" }],
+                "return": "element"
+            },
+            {
+                "name": "createDocumentFragment",
+                "args": [],
+                "return": "document_fragment"
+            },
+            {
+                "name": "createTextNode",
+                "args": [{ "type": "string" }],
+                "return": "text"
+            },
+            {
+                "name": "createComment",
+                "args": [{ "type": "string" }],
+                "return": "comment"
+            },
+            { "name": "createRange", "args": [], "return": "range" },
+            {
+                "name": "createNodeIterator",
+                "args": [{ "type": "element" }],
+                "return": "node_iterator"
+            },
+            {
+                "name": "createNodeIterator",
+                "args": [{ "type": "element" }, { "type": "what_to_show" }],
+                "return": "node_iterator"
+            },
+            {
+                "name": "createTreeWalker",
+                "args": [{ "type": "element" }],
+                "return": "tree_walker"
+            },
+            {
+                "name": "createTreeWalker",
+                "args": [{ "type": "element" }, { "type": "what_to_show" }],
+                "return": "tree_walker"
+            },
+            {
+                "name": "createAttribute",
+                "args": [{ "type": "string" }],
+                "return": "attr"
+            },
+            {
+                "name": "createAttributeNS",
+                "args": [{ "type": "string" }, { "type": "string" }],
+                "return": "attr"
+            },
+            {
+                "name": "createProcessingInstruction",
+                "args": [{ "type": "string" }, { "type": "string" }],
+                "return": "processing_instruction"
+            },
+            {
+                "name": "importNode",
+                "args": [{ "type": "element" }, { "type": "boolean" }],
+                "return": "element"
+            },
+            {
+                "name": "adoptNode",
+                "args": [{ "type": "element" }],
+                "return": "element"
+            },
+            {
+                "name": "getElementsByTagName",
+                "args": [{ "type": "tag" }],
+                "return": "html_collection"
+            },
+            {
+                "name": "getElementsByTagNameNS",
+                "args": [{ "type": "string" }, { "type": "string" }],
+                "return": "html_collection"
+            },
+            {
+                "name": "getElementsByClassName",
+                "args": [{ "type": "class" }],
+                "return": "html_collection"
+            },
+            {
+                "name": "querySelector",
+                "args": [{ "type": "css_selector" }],
+                "return": "element"
+            },
+            {
+                "name": "querySelectorAll",
+                "args": [{ "type": "css_selector" }],
+                "return": "node_list"
+            },
+            { "name": "hasFocus", "args": [], "return": "void" },
+            {
+                "name": "execCommand",
+                "args": [
+                    { "type": "string" },
+                    { "type": "boolean" },
+                    { "type": "string" }
+                ],
+                "return": "void"
+            },
+            {
+                "name": "queryCommandEnabled",
+                "args": [{ "type": "string" }],
+                "return": "void"
+            },
+            {
+                "name": "queryCommandState",
+                "args": [{ "type": "string" }],
+                "return": "void"
+            },
+            {
+                "name": "queryCommandSupported",
+                "args": [{ "type": "string" }],
+                "return": "void"
+            },
+            {
+                "name": "queryCommandValue",
+                "args": [{ "type": "string" }],
+                "return": "void"
+            },
+            { "name": "exitPointerLock", "args": [], "return": "void" },
+            { "name": "webkitCancelFullScreen", "args": [], "return": "void" },
+            { "name": "webkitExitFullscreen", "args": [], "return": "void" },
+            { "name": "captureEvents", "args": [], "return": "void" },
+            { "name": "releaseEvents", "args": [], "return": "void" },
+            {
+                "name": "createExpression",
+                "args": [{ "type": "xpath" }],
+                "return": "xpath_expression"
+            },
+            {
+                "name": "createNSResolver",
+                "args": [{ "type": "element" }],
+                "return": "xpath_ns_resolver"
+            },
+            {
+                "name": "evaluate",
+                "args": [
+                    { "type": "xpath" },
+                    { "type": "element" },
+                    { "type": "xpath_ns_resolver" },
+                    { "type": "integer" }
+                ],
+                "return": "xpath_result"
+            },
+            {
+                "name": "caretRangeFromPoint",
+                "args": [{ "type": "integer" }, { "type": "integer" }],
+                "return": "range"
+            }
+        ],
+        "DocumentOrShadowRoot": [
+            { "name": "getSelection", "args": [], "return": "selection" },
+            {
+                "name": "elementFromPoint",
+                "args": [{ "type": "integer" }, { "type": "integer" }],
+                "return": "element"
+            },
+            {
+                "name": "elementsFromPoint",
+                "args": [{ "type": "integer" }, { "type": "integer" }],
+                "return": "element_list"
+            }
+        ],
+        "Node": [
+            {
+                "name": "appendChild",
+                "args": [{ "type": "element" }],
+                "return": "element"
+            },
+            {
+                "name": "insertBefore",
+                "args": [{ "type": "element" }, { "type": "element" }],
+                "return": "element"
+            },
+            {
+                "name": "removeChild",
+                "args": [{ "type": "element" }],
+                "return": "element"
+            },
+            {
+                "name": "replaceChild",
+                "args": [{ "type": "element" }, { "type": "element" }],
+                "return": "element"
+            },
+            {
+                "name": "cloneNode",
+                "args": [{ "type": "boolean" }],
+                "return": "element"
+            },
+            { "name": "hasChildNodes", "args": [], "return": "void" },
+            { "name": "getRootNode", "args": [], "return": "element" },
+            { "name": "normalize", "args": [], "return": "void" },
+            {
+                "name": "isEqualNode",
+                "args": [{ "type": "element" }],
+                "return": "void"
+            },
+            {
+                "name": "isSameNode",
+                "args": [{ "type": "element" }],
+                "return": "void"
+            },
+            {
+                "name": "compareDocumentPosition",
+                "args": [{ "type": "element" }],
+                "return": "void"
+            },
+            {
+                "name": "contains",
+                "args": [{ "type": "element" }],
+                "return": "void"
+            },
+            {
+                "name": "lookupPrefix",
+                "args": [{ "type": "string" }],
+                "return": "void"
+            },
+            {
+                "name": "lookupNamespaceURI",
+                "args": [{ "type": "string" }],
+                "return": "void"
+            },
+            {
+                "name": "isDefaultNamespace",
+                "args": [{ "type": "string" }],
+                "return": "void"
+            }
+        ],
+        "Element": [
+            {
+                "name": "before",
+                "args": [{ "type": "element" }],
+                "return": "void"
+            },
+            {
+                "name": "after",
+                "args": [{ "type": "element" }],
+                "return": "void"
+            },
+            {
+                "name": "replaceWith",
+                "args": [{ "type": "element" }],
+                "return": "void"
+            },
+            { "name": "remove", "args": [], "return": "void" },
+            {
+                "name": "prepend",
+                "args": [{ "type": "element" }],
+                "return": "void"
+            },
+            {
+                "name": "append",
+                "args": [{ "type": "element" }],
+                "return": "void"
+            },
+            {
+                "name": "setAttribute",
+                "args": [{ "type": "string" }, { "type": "string" }],
+                "return": "void"
+            },
+            {
+                "name": "removeAttribute",
+                "args": [{ "type": "string" }],
+                "return": "void"
+            },
+            {
+                "name": "getAttribute",
+                "args": [{ "type": "string" }],
+                "return": "void"
+            },
+            {
+                "name": "hasAttribute",
+                "args": [{ "type": "string" }],
+                "return": "void"
+            },
+            { "name": "hasAttributes", "args": [], "return": "void" },
+            {
+                "name": "closest",
+                "args": [{ "type": "css_selector" }],
+                "return": "element"
+            },
+            {
+                "name": "matches",
+                "args": [{ "type": "css_selector" }],
+                "return": "void"
+            },
+            {
+                "name": "webkitMatchesSelector",
+                "args": [{ "type": "css_selector" }],
+                "return": "void"
+            },
+            {
+                "name": "getElementsByTagName",
+                "args": [{ "type": "tag" }],
+                "return": "html_collection"
+            },
+            {
+                "name": "getElementsByClassName",
+                "args": [{ "type": "class" }],
+                "return": "html_collection"
+            },
+            {
+                "name": "querySelector",
+                "args": [{ "type": "css_selector" }],
+                "return": "element"
+            },
+            {
+                "name": "querySelectorAll",
+                "args": [{ "type": "css_selector" }],
+                "return": "node_list"
+            },
+            {
+                "name": "insertAdjacentElement",
+                "args": [{ "type": "insert_position" }, { "type": "element" }],
+                "return": "element"
+            },
+            {
+                "name": "insertAdjacentText",
+                "args": [{ "type": "insert_position" }, { "type": "string" }],
+                "return": "void"
+            },
+            {
+                "name": "insertAdjacentHTML",
+                "args": [
+                    { "type": "insert_position" },
+                    { "type": "html_string" }
+                ],
+                "return": "void"
+            },
+            { "name": "getClientRects", "args": [], "return": "dom_rect_list" },
+            {
+                "name": "getBoundingClientRect",
+                "args": [],
+                "return": "dom_rect"
+            },
+            {
+                "name": "scroll",
+                "args": [{ "type": "integer" }, { "type": "integer" }],
+                "return": "void"
+            },
+            {
+                "name": "scrollTo",
+                "args": [{ "type": "integer" }, { "type": "integer" }],
+                "return": "void"
+            },
+            {
+                "name": "scrollBy",
+                "args": [{ "type": "integer" }, { "type": "integer" }],
+                "return": "void"
+            },
+            {
+                "name": "scrollIntoView",
+                "args": [{ "type": "boolean" }],
+                "return": "void"
+            },
+            {
+                "name": "scrollIntoViewIfNeeded",
+                "args": [{ "type": "boolean" }],
+                "return": "void"
+            },
+            { "name": "click", "args": [], "return": "void" },
+            { "name": "blur", "args": [], "return": "void" },
+            { "name": "focus", "args": [], "return": "void" },
+            {
+                "name": "setPointerCapture",
+                "args": [{ "type": "integer" }],
+                "return": "void"
+            },
+            {
+                "name": "releasePointerCapture",
+                "args": [{ "type": "integer" }],
+                "return": "void"
+            },
+            { "name": "requestPointerLock", "args": [], "return": "void" },
+            { "name": "webkitRequestFullScreen", "args": [], "return": "void" },
+            {
+                "name": "animate",
+                "args": [{ "type": "keyframes" }, { "type": "clock_ms" }],
+                "return": "animation"
+            },
+            { "name": "getAnimations", "args": [], "return": "animations" }
+        ],
+        "EventTarget": [
+            {
+                "name": "addEventListener",
+                "args": [{ "type": "event_type" }, { "type": "event_handler" }],
+                "return": "void"
+            },
+            {
+                "name": "addEventListener",
+                "args": [
+                    { "type": "event_type" },
+                    { "type": "event_handler" },
+                    { "type": "boolean" }
+                ],
+                "return": "void"
+            },
+            {
+                "name": "removeEventListener",
+                "args": [{ "type": "event_type" }, { "type": "event_handler" }],
+                "return": "void"
+            },
+            {
+                "name": "dispatchEvent",
+                "args": [{ "type": "event" }],
+                "return": "void"
+            }
+        ],
+        "Window": [
+            { "name": "stop", "args": [], "return": "void" },
+            { "name": "focus", "args": [], "return": "void" },
+            { "name": "blur", "args": [], "return": "void" },
+            {
+                "name": "requestAnimationFrame",
+                "args": [{ "type": "event_handler" }],
+                "return": "request_id"
+            },
+            {
+                "name": "cancelAnimationFrame",
+                "args": [{ "type": "request_id" }],
+                "return": "void"
+            },
+            {
+                "name": "getComputedStyle",
+                "args": [{ "type": "element" }],
+                "return": "void"
+            },
+            {
+                "name": "moveTo",
+                "args": [{ "type": "integer" }, { "type": "integer" }],
+                "return": "void"
+            },
+            {
+                "name": "moveBy",
+                "args": [{ "type": "integer" }, { "type": "integer" }],
+                "return": "void"
+            },
+            {
+                "name": "resizeTo",
+                "args": [{ "type": "integer" }, { "type": "integer" }],
+                "return": "void"
+            },
+            {
+                "name": "resizeBy",
+                "args": [{ "type": "integer" }, { "type": "integer" }],
+                "return": "void"
+            },
+            {
+                "name": "scroll",
+                "args": [{ "type": "integer" }, { "type": "integer" }],
+                "return": "void"
+            },
+            {
+                "name": "scrollTo",
+                "args": [{ "type": "integer" }, { "type": "integer" }],
+                "return": "void"
+            },
+            {
+                "name": "scrollBy",
+                "args": [{ "type": "integer" }, { "type": "integer" }],
+                "return": "void"
+            },
+            { "name": "getSelection", "args": [], "return": "selection" },
+            {
+                "name": "find",
+                "args": [{ "type": "string" }],
+                "return": "void"
+            },
+            {
+                "name": "btoa",
+                "args": [{ "type": "string" }],
+                "return": "void"
+            },
+            {
+                "name": "atob",
+                "args": [{ "type": "string" }],
+                "return": "void"
+            },
+            {
+                "name": "postMessage",
+                "args": [{ "type": "string" }],
+                "return": "void"
+            },
+            {
+                "name": "matchMedia",
+                "args": [{ "type": "media_query" }],
+                "return": "media_query_list"
+            }
+        ],
+        "History": [
+            {
+                "name": "pushState",
+                "args": [{ "type": "history_state" }, { "type": "string" }],
+                "return": "void"
+            },
+            {
+                "name": "replaceState",
+                "args": [{ "type": "history_state" }, { "type": "string" }],
+                "return": "void"
+            }
+        ],
+        "CharacterData": [
+            {
+                "name": "substringData",
+                "args": [{ "type": "integer" }, { "type": "integer" }],
+                "return": "void"
+            },
+            {
+                "name": "appendData",
+                "args": [{ "type": "string" }],
+                "return": "void"
+            },
+            {
+                "name": "insertData",
+                "args": [{ "type": "integer" }, { "type": "string" }],
+                "return": "void"
+            },
+            {
+                "name": "deleteData",
+                "args": [{ "type": "integer" }, { "type": "integer" }],
+                "return": "void"
+            },
+            {
+                "name": "replaceData",
+                "args": [
+                    { "type": "integer" },
+                    { "type": "integer" },
+                    { "type": "string" }
+                ],
+                "return": "void"
+            }
+        ],
+        "Text": [
+            {
+                "name": "splitText",
+                "args": [{ "type": "integer" }],
+                "return": "text"
+            }
+        ],
+        "Range": [
+            {
+                "name": "cloneContents",
+                "args": [],
+                "return": "document_fragment"
+            },
+            { "name": "cloneRange", "args": [], "return": "range" },
+            {
+                "name": "collapse",
+                "args": [{ "type": "boolean" }],
+                "return": "void"
+            },
+            {
+                "name": "compareBoundaryPoints",
+                "args": [{ "type": "range_compare" }, { "type": "range" }],
+                "return": "void"
+            },
+            {
+                "name": "comparePoint",
+                "args": [{ "type": "element" }, { "type": "integer" }],
+                "return": "void"
+            },
+            {
+                "name": "createContextualFragment",
+                "args": [{ "type": "string" }],
+                "return": "document_fragment"
+            },
+            { "name": "deleteContents", "args": [], "return": "void" },
+            { "name": "detach", "args": [], "return": "void" },
+            {
+                "name": "extractContents",
+                "args": [],
+                "return": "document_fragment"
+            },
+            {
+                "name": "getBoundingClientRect",
+                "args": [],
+                "return": "dom_rect"
+            },
+            { "name": "getClientRects", "args": [], "return": "dom_rect_list" },
+            {
+                "name": "insertNode",
+                "args": [{ "type": "element" }],
+                "return": "void"
+            },
+            {
+                "name": "intersectsNode",
+                "args": [{ "type": "element" }],
+                "return": "void"
+            },
+            {
+                "name": "isPointInRange",
+                "args": [{ "type": "element" }, { "type": "integer" }],
+                "return": "void"
+            },
+            {
+                "name": "selectNode",
+                "args": [{ "type": "element" }],
+                "return": "void"
+            },
+            {
+                "name": "selectNodeContents",
+                "args": [{ "type": "element" }],
+                "return": "void"
+            },
+            {
+                "name": "setEnd",
+                "args": [{ "type": "element" }, { "type": "integer" }],
+                "return": "void"
+            },
+            {
+                "name": "setEndAfter",
+                "args": [{ "type": "element" }],
+                "return": "void"
+            },
+            {
+                "name": "setEndBefore",
+                "args": [{ "type": "element" }],
+                "return": "void"
+            },
+            {
+                "name": "setStart",
+                "args": [{ "type": "element" }, { "type": "integer" }],
+                "return": "void"
+            },
+            {
+                "name": "setStartAfter",
+                "args": [{ "type": "element" }],
+                "return": "void"
+            },
+            {
+                "name": "setStartBefore",
+                "args": [{ "type": "element" }],
+                "return": "void"
+            },
+            {
+                "name": "surroundContents",
+                "args": [{ "type": "element" }],
+                "return": "void"
+            }
+        ],
+        "Selection": [
+            {
+                "name": "getRangeAt",
+                "args": [{ "type": "integer" }],
+                "return": "range"
+            },
+            {
+                "name": "addRange",
+                "args": [{ "type": "range" }],
+                "return": "void"
+            },
+            { "name": "removeAllRanges", "args": [], "return": "void" },
+            { "name": "empty", "args": [], "return": "void" },
+            {
+                "name": "collapse",
+                "args": [{ "type": "element" }, { "type": "integer" }],
+                "return": "void"
+            },
+            { "name": "collapseToStart", "args": [], "return": "void" },
+            { "name": "collapseToEnd", "args": [], "return": "void" },
+            {
+                "name": "extend",
+                "args": [{ "type": "element" }, { "type": "integer" }],
+                "return": "void"
+            },
+            {
+                "name": "setBaseAndExtent",
+                "args": [
+                    { "type": "element" },
+                    { "type": "integer" },
+                    { "type": "element" },
+                    { "type": "integer" }
+                ],
+                "return": "void"
+            },
+            {
+                "name": "selectAllChildren",
+                "args": [{ "type": "element" }],
+                "return": "void"
+            },
+            { "name": "deleteFromDocument", "args": [], "return": "void" },
+            {
+                "name": "containsNode",
+                "args": [{ "type": "element" }, { "type": "boolean" }],
+                "return": "void"
+            },
+            {
+                "name": "modify",
+                "args": [
+                    { "type": "selection_modify_alter" },
+                    { "type": "selection_modify_direction" },
+                    { "type": "selection_modify_granularity" }
+                ],
+                "return": "void"
+            }
+        ],
+        "NodeIterator": [
+            { "name": "nextNode", "args": [], "return": "element" },
+            { "name": "previousNode", "args": [], "return": "element" },
+            { "name": "detach", "args": [], "return": "void" }
+        ],
+        "TreeWalker": [
+            { "name": "parentNode", "args": [], "return": "element" },
+            { "name": "firstChild", "args": [], "return": "element" },
+            { "name": "lastChild", "args": [], "return": "element" },
+            { "name": "previousSibling", "args": [], "return": "element" },
+            { "name": "nextSibling", "args": [], "return": "element" },
+            { "name": "previousNode", "args": [], "return": "element" },
+            { "name": "nextNode", "args": [], "return": "element" }
+        ],
+        "CSSStyleDeclaration": [
+            {
+                "name": "setProperty",
+                "args": [{ "type": "string" }, { "type": "string" }],
+                "return": "void"
+            },
+            {
+                "name": "removeProperty",
+                "args": [{ "type": "string" }],
+                "return": "void"
+            },
+            {
+                "name": "getPropertyValue",
+                "args": [{ "type": "css_property_name" }],
+                "return": "void"
+            },
+            {
+                "name": "getPropertyPriority",
+                "args": [{ "type": "css_property_name" }],
+                "return": "void"
+            },
+            { "name": "item", "args": [{ "type": "index" }], "return": "void" }
+        ],
+        "CSSStyleSheet": [
+            {
+                "name": "insertRule",
+                "args": [{ "type": "css_style_rule" }],
+                "return": "void"
+            },
+            {
+                "name": "deleteRule",
+                "args": [{ "type": "index" }],
+                "return": "void"
+            }
+        ],
+        "CSSKeyframesRule": [
+            {
+                "name": "appendRule",
+                "args": [{ "type": "string" }],
+                "return": "void"
+            },
+            {
+                "name": "deleteRule",
+                "args": [{ "type": "string" }],
+                "return": "void"
+            },
+            {
+                "name": "findRule",
+                "args": [{ "type": "string" }],
+                "return": "void"
+            }
+        ],
+        "Animation": [
+            { "name": "finish", "args": [], "return": "void" },
+            { "name": "play", "args": [], "return": "void" },
+            { "name": "pause", "args": [], "return": "void" },
+            { "name": "reverse", "args": [], "return": "void" },
+            { "name": "cancel", "args": [], "return": "void" }
+        ],
+        "DOMTokenList": [
+            { "name": "add", "args": [{ "type": "string" }], "return": "void" },
+            {
+                "name": "contains",
+                "args": [{ "type": "string" }],
+                "return": "void"
+            },
+            {
+                "name": "supports",
+                "args": [{ "type": "string" }],
+                "return": "void"
+            },
+            {
+                "name": "toggle",
+                "args": [{ "type": "string" }, { "type": "boolean" }],
+                "return": "void"
+            }
+        ],
+        "MutationObserver": [
+            {
+                "name": "observe",
+                "args": [
+                    { "type": "element" },
+                    { "type": "mutation_observer_init" }
+                ],
+                "return": "void"
+            },
+            { "name": "disconnect", "args": [], "return": "void" },
+            { "name": "takeRecords", "args": [], "return": "mutation_records" }
+        ],
+        "HTMLMediaElement": [
+            { "name": "load", "args": [], "return": "void" },
+            { "name": "pause", "args": [], "return": "void" },
+            { "name": "play", "args": [], "return": "void" },
+            {
+                "name": "canPlayType",
+                "args": [{ "type": "media_type" }],
+                "return": "void"
+            },
+            {
+                "name": "addTextTrack",
+                "args": [{ "type": "track_kind" }],
+                "return": "text_track"
+            },
+            {
+                "name": "fastSeek",
+                "args": [{ "type": "clock" }],
+                "return": "void"
+            }
+        ],
+        "HTMLTableElement": [
+            { "name": "createCaption", "args": [], "return": "element" },
+            { "name": "deleteCaption", "args": [], "return": "void" },
+            { "name": "createTHead", "args": [], "return": "element" },
+            { "name": "deleteTHead", "args": [], "return": "void" },
+            { "name": "createTFoot", "args": [], "return": "element" },
+            { "name": "deleteTFoot", "args": [], "return": "void" },
+            { "name": "createTBody", "args": [], "return": "element" },
+            {
+                "name": "insertRow",
+                "args": [{ "type": "integer" }],
+                "return": "element"
+            },
+            {
+                "name": "deleteRow",
+                "args": [{ "type": "integer" }],
+                "return": "void"
+            }
+        ],
+        "HTMLTableRowElement": [
+            {
+                "name": "insertCell",
+                "args": [{ "type": "integer" }],
+                "return": "element"
+            },
+            {
+                "name": "deleteCell",
+                "args": [{ "type": "integer" }],
+                "return": "void"
+            }
+        ],
+        "HTMLTableSectionElement": [
+            {
+                "name": "insertRow",
+                "args": [{ "type": "index" }],
+                "return": "element"
+            }
+        ],
+        "HTMLFormElement": [
+            { "name": "submit", "args": [], "return": "void" },
+            { "name": "reset", "args": [], "return": "void" },
+            { "name": "checkValidity", "args": [], "return": "void" },
+            { "name": "reportValidity", "args": [], "return": "void" }
+        ],
+        "HTMLInputElement": [
+            {
+                "name": "stepUp",
+                "args": [{ "type": "integer" }],
+                "return": "void"
+            },
+            {
+                "name": "stepDown",
+                "args": [{ "type": "integer" }],
+                "return": "void"
+            },
+            { "name": "checkValidity", "args": [], "return": "void" },
+            { "name": "reportValidity", "args": [], "return": "void" },
+            {
+                "name": "setCustomValidity",
+                "args": [{ "type": "string" }],
+                "return": "void"
+            },
+            { "name": "select", "args": [], "return": "void" },
+            {
+                "name": "setRangeText",
+                "args": [{ "type": "string" }],
+                "return": "void"
+            },
+            {
+                "name": "setSelectionRange",
+                "args": [{ "type": "integer" }, { "type": "integer" }],
+                "return": "void"
+            }
+        ],
+        "HTMLTextAreaElement": [
+            { "name": "checkValidity", "args": [], "return": "void" },
+            { "name": "reportValidity", "args": [], "return": "void" },
+            {
+                "name": "setCustomValidity",
+                "args": [{ "type": "string" }],
+                "return": "void"
+            },
+            { "name": "select", "args": [], "return": "void" },
+            {
+                "name": "setRangeText",
+                "args": [{ "type": "string" }],
+                "return": "void"
+            },
+            {
+                "name": "setSelectionRange",
+                "args": [{ "type": "integer" }, { "type": "integer" }],
+                "return": "void"
+            }
+        ],
+        "HTMLSelectElement": [
+            { "name": "checkValidity", "args": [], "return": "void" },
+            { "name": "reportValidity", "args": [], "return": "void" },
+            {
+                "name": "setCustomValidity",
+                "args": [{ "type": "string" }],
+                "return": "void"
+            }
+        ],
+        "HTMLDialogElement": [
+            { "name": "show", "args": [], "return": "void" },
+            { "name": "showModal", "args": [], "return": "void" },
+            { "name": "close", "args": [], "return": "void" }
+        ],
+        "HTMLCanvasElement": [
+            { "name": "toDataURL", "args": [], "return": "void" },
+            {
+                "name": "toBlob",
+                "args": [{ "type": "event_handler" }],
+                "return": "void"
+            }
+        ],
+        "HTMLMarqueeElement": [
+            { "name": "start", "args": [], "return": "void" },
+            { "name": "stop", "args": [], "return": "void" }
+        ],
+        "HTMLVideoElement": [
+            { "name": "webkitEnterFullscreen", "args": [], "return": "void" },
+            { "name": "webkitExitFullscreen", "args": [], "return": "void" }
+        ],
+        "HTMLSlotElement": [
+            { "name": "assignedNodes", "args": [], "return": "element_list" }
+        ],
+        "ShadowHost": [
+            {
+                "name": "attachShadow",
+                "args": [{ "type": "shadow_root_init" }],
+                "return": "shadow_root"
+            }
+        ],
+        "DataTransfer": [
+            {
+                "name": "setDragImage",
+                "args": [
+                    { "type": "element" },
+                    { "type": "integer" },
+                    { "type": "integer" }
+                ],
+                "return": "void"
+            },
+            {
+                "name": "getData",
+                "args": [{ "type": "string" }],
+                "return": "void"
+            },
+            {
+                "name": "setData",
+                "args": [{ "type": "string" }, { "type": "string" }],
+                "return": "void"
+            },
+            { "name": "clearData", "args": [], "return": "void" }
+        ],
+        "Event": [
+            { "name": "stopPropagation", "args": [], "return": "void" },
+            {
+                "name": "stopImmediatePropagation",
+                "args": [],
+                "return": "void"
+            },
+            { "name": "preventDefault", "args": [], "return": "void" },
+            {
+                "name": "initEvent",
+                "args": [
+                    { "type": "event_type" },
+                    { "type": "boolean" },
+                    { "type": "boolean" }
+                ],
+                "return": "void"
+            },
+            { "name": "composedPath", "args": [], "return": "event_targets" }
+        ],
+        "FontFaceSet": [
+            {
+                "name": "load",
+                "args": [{ "type": "string" }],
+                "return": "void"
+            },
+            {
+                "name": "check",
+                "args": [{ "type": "string" }],
+                "return": "void"
+            }
+        ],
+        "FontFace": [{ "name": "load", "args": [], "return": "void" }],
+        "DOMImplementation": [
+            {
+                "name": "createDocumentType",
+                "args": [
+                    { "type": "string" },
+                    { "type": "string" },
+                    { "type": "string" }
+                ],
+                "return": "void"
+            },
+            {
+                "name": "createDocument",
+                "args": [{ "type": "string" }, { "type": "string" }],
+                "return": "void"
+            },
+            {
+                "name": "createHTMLDocument",
+                "args": [{ "type": "string" }],
+                "return": "document"
+            },
+            { "name": "hasFeature", "args": [], "return": "void" }
+        ],
+        "XMLSerializer": [
+            {
+                "name": "serializeToString",
+                "args": [{ "type": "element" }],
+                "return": "void"
+            }
+        ],
+        "DOMParser": [
+            {
+                "name": "parseFromString",
+                "args": [{ "type": "string" }, { "type": "string" }],
+                "return": "document"
+            }
+        ],
+        "XSLTProcessor": [
+            {
+                "name": "importStylesheet",
+                "args": [{ "type": "element" }],
+                "return": "void"
+            },
+            {
+                "name": "transformToFragment",
+                "args": [{ "type": "element" }, { "type": "document" }],
+                "return": "void"
+            },
+            {
+                "name": "transformToDocument",
+                "args": [{ "type": "element" }],
+                "return": "void"
+            },
+            {
+                "name": "setParameter",
+                "args": [
+                    { "type": "string" },
+                    { "type": "string" },
+                    { "type": "string" }
+                ],
+                "return": "void"
+            },
+            { "name": "clearParameters", "args": [], "return": "void" },
+            { "name": "reset", "args": [], "return": "void" }
+        ],
+        "FormData": [
+            {
+                "name": "append",
+                "args": [{ "type": "string" }, { "type": "string" }],
+                "return": "void"
+            },
+            {
+                "name": "delete",
+                "args": [{ "type": "string" }],
+                "return": "void"
+            },
+            { "name": "has", "args": [{ "type": "string" }], "return": "void" },
+            { "name": "get", "args": [{ "type": "string" }], "return": "void" },
+            {
+                "name": "set",
+                "args": [{ "type": "string" }, { "type": "string" }],
+                "return": "void"
+            }
+        ],
+        "URLSearchParams": [
+            {
+                "name": "set",
+                "args": [{ "type": "string" }, { "type": "string" }],
+                "return": "void"
+            },
+            {
+                "name": "append",
+                "args": [{ "type": "string" }, { "type": "string" }],
+                "return": "void"
+            },
+            {
+                "name": "delete",
+                "args": [{ "type": "string" }],
+                "return": "void"
+            },
+            { "name": "has", "args": [{ "type": "string" }], "return": "void" },
+            { "name": "get", "args": [{ "type": "string" }], "return": "void" }
+        ],
+        "SVGSVGElement": [
+            { "name": "pauseAnimations", "args": [], "return": "void" },
+            { "name": "unpauseAnimations", "args": [], "return": "void" },
+            { "name": "animationsPaused", "args": [], "return": "void" },
+            { "name": "getCurrentTime", "args": [], "return": "void" },
+            {
+                "name": "setCurrentTime",
+                "args": [{ "type": "clock" }],
+                "return": "void"
+            },
+            { "name": "forceRedraw", "args": [], "return": "void" },
+            { "name": "deselectAll", "args": [], "return": "void" },
+            { "name": "createSVGNumber", "args": [], "return": "svg_number" },
+            { "name": "createSVGLength", "args": [], "return": "svg_length" },
+            { "name": "createSVGAngle", "args": [], "return": "svg_angle" },
+            { "name": "createSVGPoint", "args": [], "return": "svg_point" },
+            { "name": "createSVGMatrix", "args": [], "return": "svg_matrix" },
+            { "name": "createSVGRect", "args": [], "return": "svg_rect" },
+            {
+                "name": "createSVGTransform",
+                "args": [],
+                "return": "svg_transform"
+            },
+            {
+                "name": "getElementById",
+                "args": [{ "type": "svg_element_id" }],
+                "return": "svg_element"
+            }
+        ],
+        "SVGAnimationElement": [
+            { "name": "beginElement", "args": [], "return": "void" },
+            {
+                "name": "beginElementAt",
+                "args": [{ "type": "clock" }],
+                "return": "void"
+            },
+            { "name": "endElement", "args": [], "return": "void" },
+            {
+                "name": "endElementAt",
+                "args": [{ "type": "clock" }],
+                "return": "void"
+            }
+        ],
+        "SVGGraphicsElement": [
+            { "name": "getCTM", "args": [], "return": "svg_matrix" },
+            { "name": "getScreenCTM", "args": [], "return": "svg_matrix" },
+            { "name": "getBBox", "args": [], "return": "svg_rect" }
+        ],
+        "SVGGeometryElement": [
+            {
+                "name": "isPointInFill",
+                "args": [{ "type": "svg_point" }],
+                "return": "void"
+            },
+            {
+                "name": "isPointInStroke",
+                "args": [{ "type": "svg_point" }],
+                "return": "void"
+            }
+        ],
+        "SVGTextContentElement": [
+            { "name": "getComputedTextLength", "args": [], "return": "void" },
+            { "name": "getNumberOfChars", "args": [], "return": "void" },
+            {
+                "name": "getSubStringLength",
+                "args": [{ "type": "integer" }, { "type": "integer" }],
+                "return": "void"
+            },
+            {
+                "name": "selectSubString",
+                "args": [{ "type": "integer" }, { "type": "integer" }],
+                "return": "void"
+            },
+            {
+                "name": "getStartPositionOfChar",
+                "args": [{ "type": "integer" }],
+                "return": "svg_point"
+            },
+            {
+                "name": "getEndPositionOfChar",
+                "args": [{ "type": "integer" }],
+                "return": "svg_point"
+            },
+            {
+                "name": "getExtentOfChar",
+                "args": [{ "type": "integer" }],
+                "return": "svg_rect"
+            }
+        ],
+        "SVGMatrix": [
+            { "name": "flipX", "args": [], "return": "svg_matrix" },
+            { "name": "flipY", "args": [], "return": "svg_matrix" },
+            { "name": "inverse", "args": [], "return": "svg_matrix" },
+            {
+                "name": "multiply",
+                "args": [{ "type": "svg_matrix" }],
+                "return": "svg_matrix"
+            },
+            {
+                "name": "rotate",
+                "args": [{ "type": "float" }],
+                "return": "svg_matrix"
+            },
+            {
+                "name": "scale",
+                "args": [{ "type": "float" }],
+                "return": "svg_matrix"
+            },
+            {
+                "name": "scaleNonUniform",
+                "args": [{ "type": "float" }, { "type": "float" }],
+                "return": "svg_matrix"
+            },
+            {
+                "name": "skewX",
+                "args": [{ "type": "float" }],
+                "return": "svg_matrix"
+            },
+            {
+                "name": "skewY",
+                "args": [{ "type": "float" }],
+                "return": "svg_matrix"
+            },
+            {
+                "name": "translate",
+                "args": [{ "type": "float" }, { "type": "float" }],
+                "return": "svg_matrix"
+            }
+        ],
+        "SVGPathElement": [
+            { "name": "getTotalLength", "args": [], "return": "void" },
+            {
+                "name": "getPointAtLength",
+                "args": [{ "type": "integer" }],
+                "return": "svg_point"
+            }
+        ],
+        "SVGMarkerElement": [
+            {
+                "name": "setOrientToAngle",
+                "args": [{ "type": "svg_angle" }],
+                "return": "void"
+            },
+            { "name": "setOrientToAuto", "args": [], "return": "void" }
+        ],
+        "SVGTransform": [
+            {
+                "name": "setMatrix",
+                "args": [{ "type": "svg_matrix" }],
+                "return": "void"
+            },
+            {
+                "name": "setRotate",
+                "args": [
+                    { "type": "float" },
+                    { "type": "float" },
+                    { "type": "float" }
+                ],
+                "return": "void"
+            },
+            {
+                "name": "setScale",
+                "args": [{ "type": "float" }, { "type": "float" }],
+                "return": "void"
+            },
+            {
+                "name": "setSkewX",
+                "args": [{ "type": "float" }],
+                "return": "void"
+            },
+            {
+                "name": "setSkewY",
+                "args": [{ "type": "float" }],
+                "return": "void"
+            },
+            {
+                "name": "setTranslate",
+                "args": [{ "type": "float" }, { "type": "float" }],
+                "return": "void"
+            }
+        ],
+        "SVGPoint": [
+            {
+                "name": "matrixTransform",
+                "args": [{ "type": "svg_matrix" }],
+                "return": "svg_point"
+            }
+        ]
+    },
+    "hierarchy": {
+        "EventTarget": [
+            "Window",
+            "Node",
+            "MediaQueryList",
+            "MessagePort",
+            "FontFaceSet"
+        ],
+        "Node": [
+            "Element",
+            "Document",
+            "DocumentFragment",
+            "CharacterData",
+            "DocumentType"
+        ],
+        "CharacterData": ["Text", "Comment", "ProcessingInstruction"],
+        "Text": ["CDATASection"],
+        "DocumentFragment": ["ShadowRoot"],
+        "Element": ["HTMLElement", "SVGElement"],
+        "HTMLElement": [
+            "HTMLAnchorElement",
+            "HTMLAreaElement",
+            "HTMLAudioElement",
+            "HTMLBRElement",
+            "HTMLBodyElement",
+            "HTMLButtonElement",
+            "HTMLCanvasElement",
+            "HTMLContentElement",
+            "HTMLDListElement",
+            "HTMLDataElement",
+            "HTMLDataListElement",
+            "HTMLDetailsElement",
+            "HTMLDialogElement",
+            "HTMLDirectoryElement",
+            "HTMLDivElement",
+            "HTMLEmbedElement",
+            "HTMLFieldSetElement",
+            "HTMLFontElement",
+            "HTMLFormElement",
+            "HTMLFrameElement",
+            "HTMLFrameSetElement",
+            "HTMLHeading1Element",
+            "HTMLHeading2Element",
+            "HTMLHeading3Element",
+            "HTMLHeading4Element",
+            "HTMLHeading5Element",
+            "HTMLHeading6Element",
+            "HTMLHRElement",
+            "HTMLIFrameElement",
+            "HTMLImageElement",
+            "HTMLInputElement",
+            "HTMLKeygenElement",
+            "HTMLLIElement",
+            "HTMLLabelElement",
+            "HTMLLegendElement",
+            "HTMLLinkElement",
+            "HTMLMapElement",
+            "HTMLMarqueeElement",
+            "HTMLMenuElement",
+            "HTMLMenuItemElement",
+            "HTMLMetaElement",
+            "HTMLMeterElement",
+            "HTMLObjectElement",
+            "HTMLOListElement",
+            "HTMLOptGroupElement",
+            "HTMLOptionElement",
+            "HTMLOutputElement",
+            "HTMLParagraphElement",
+            "HTMLParamElement",
+            "HTMLPictureElement",
+            "HTMLPreElement",
+            "HTMLProgressElement",
+            "HTMLQElement",
+            "HTMLSelectElement",
+            "HTMLShadowElement",
+            "HTMLSlotElement",
+            "HTMLSourceElement",
+            "HTMLSpanElement",
+            "HTMLStyleElement",
+            "HTMLTableElement",
+            "HTMLTableCaptionElement",
+            "HTMLTableCellElement",
+            "HTMLTableColElement",
+            "HTMLTableRowElement",
+            "HTMLTableSectionElement",
+            "HTMLTemplateElement",
+            "HTMLTextAreaElement",
+            "HTMLTimeElement",
+            "HTMLTitleElement",
+            "HTMLTrackElement",
+            "HTMLUListElement",
+            "HTMLVideoElement"
+        ],
+        "HTMLMediaElement": ["HTMLVideoElement", "HTMLAudioElement"],
+        "HTMLTableCellElement": [
+            "HTMLTableHeaderCellElement",
+            "HTMLTableDataCellElement"
+        ],
+        "HTMLTableColElement": ["HTMLTableColGroupElement"],
+        "HTMLTableSectionElement": [
+            "HTMLTBodyElement",
+            "HTMLTHeadElement",
+            "HTMLTFootElement"
+        ],
+        "SVGElement": [
+            "SVGSVGElement",
+            "SVGGElement",
+            "SVGDefsElement",
+            "SVGSymbolElement",
+            "SVGUseElement",
+            "SVGCircleElement",
+            "SVGEllipseElement",
+            "SVGLineElement",
+            "SVGPathElement",
+            "SVGPolygonElement",
+            "SVGPolylineElement",
+            "SVGRectElement",
+            "SVGTextElement",
+            "SVGTSpanElement",
+            "SVGTextPathElement",
+            "SVGImageElement",
+            "SVGForeignObjectElement",
+            "SVGSwitchElement",
+            "SVGAElement",
+            "SVGMarkerElement",
+            "SVGClipPathElement",
+            "SVGMaskElement",
+            "SVGPatternElement",
+            "SVGFilterElement",
+            "SVGStyleElement",
+            "SVGLinearGradientElement",
+            "SVGRadialGradientElement",
+            "SVGStopElement",
+            "SVGAnimateElement",
+            "SVGAnimateMotionElement",
+            "SVGAnimateTransformElement",
+            "SVGSetElement",
+            "SVGViewElement",
+            "SVGFEBlendElement",
+            "SVGFEColorMatrixElement",
+            "SVGFEComponentTransferElement",
+            "SVGFECompositeElement",
+            "SVGFEConvolveMatrixElement",
+            "SVGFEDiffuseLightingElement",
+            "SVGFEDisplacementMapElement",
+            "SVGFEDropShadowElement",
+            "SVGFEFloodElement",
+            "SVGFEGaussianBlurElement",
+            "SVGFEImageElement",
+            "SVGFEMergeElement",
+            "SVGFEMergeNodeElement",
+            "SVGFEMorphologyElement",
+            "SVGFEOffsetElement",
+            "SVGFESpecularLightingElement",
+            "SVGFETileElement",
+            "SVGFETurbulenceElement",
+            "SVGFEDistantLightElement",
+            "SVGFEPointLightElement",
+            "SVGFESpotLightElement"
+        ],
+        "SVGGraphicsElement": [
+            "SVGGElement",
+            "SVGDefsElement",
+            "SVGSymbolElement",
+            "SVGUseElement",
+            "SVGSwitchElement",
+            "SVGAElement",
+            "SVGForeignObjectElement",
+            "SVGImageElement",
+            "SVGGeometryElement",
+            "SVGTextContentElement",
+            "SVGSVGElement"
+        ],
+        "SVGGeometryElement": [
+            "SVGCircleElement",
+            "SVGEllipseElement",
+            "SVGLineElement",
+            "SVGPathElement",
+            "SVGPolygonElement",
+            "SVGPolylineElement",
+            "SVGRectElement"
+        ],
+        "SVGTextContentElement": [
+            "SVGTextElement",
+            "SVGTSpanElement",
+            "SVGTextPathElement"
+        ],
+        "SVGGradientElement": [
+            "SVGLinearGradientElement",
+            "SVGRadialGradientElement"
+        ],
+        "SVGAnimationElement": [
+            "SVGAnimateElement",
+            "SVGAnimateMotionElement",
+            "SVGAnimateTransformElement",
+            "SVGSetElement"
+        ],
+        "UIEvent": [
+            "MouseEvent",
+            "KeyboardEvent",
+            "FocusEvent",
+            "InputEvent",
+            "CompositionEvent",
+            "WheelEvent"
+        ],
+        "MouseEvent": ["WheelEvent", "PointerEvent", "DragEvent"],
+        "Event": [
+            "UIEvent",
+            "ProgressEvent",
+            "CustomEvent",
+            "MessageEvent",
+            "MutationEvent",
+            "AnimationEvent",
+            "TransitionEvent"
+        ],
+        "StyleSheet": ["CSSStyleSheet"],
+        "CSSRule": ["CSSStyleRule", "CSSKeyframesRule", "CSSKeyframeRule"],
+        "ShadowHost": [
+            "HTMLArticleElement",
+            "HTMLBlockQuoteElement",
+            "HTMLBodyElement",
+            "HTMLDivElement",
+            "HTMLFooterElement",
+            "HTMLHeading1Element",
+            "HTMLHeading2Element",
+            "HTMLHeading3Element",
+            "HTMLHeading4Element",
+            "HTMLHeading5Element",
+            "HTMLHeading6Element",
+            "HTMLHeaderElement",
+            "HTMLMainElement",
+            "HTMLNavElement",
+            "HTMLParagraphElement",
+            "HTMLSectionElement",
+            "HTMLSpanElement"
+        ]
+    },
+    "exec_commands": [
+        "backColor",
+        "bold",
+        "contentReadOnly",
+        "createLink",
+        "decreaseFontSize",
+        "delete",
+        "enableInlineTableEditing",
+        "enableObjectResizing",
+        "fontName",
+        "fontSize",
+        "foreColor",
+        "formatBlock",
+        "forwardDelete",
+        "heading",
+        "hiliteColor",
+        "increaseFontSize",
+        "indent",
+        "insertBrOnReturn",
+        "insertHorizontalRule",
+        "insertHTML",
+        "insertImage",
+        "insertOrderedList",
+        "insertUnorderedList",
+        "insertText",
+        "italic",
+        "justifyCenter",
+        "justifyFull",
+        "justifyLeft",
+        "justifyRight",
+        "outdent",
+        "redo",
+        "removeFormat",
+        "selectAll",
+        "strikeThrough",
+        "subscript",
+        "superscript",
+        "underline",
+        "undo",
+        "unlink",
+        "useCSS",
+        "styleWithCSS"
+    ]
+}

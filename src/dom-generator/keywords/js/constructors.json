@@ -1,0 +1,35 @@
+{
+    "constructors": {
+        "Range": { "args": [] },
+        "TreeWalker": {
+            "args": [{ "type": "element" }, { "type": "integer" }]
+        },
+        "NodeIterator": {
+            "args": [{ "type": "element" }, { "type": "integer" }]
+        },
+        "MutationObserver": { "args": [{ "type": "function" }] },
+        "IntersectionObserver": { "args": [{ "type": "function" }] },
+        "ResizeObserver": { "args": [{ "type": "function" }] },
+        "Selection": { "args": [], "via": "document.getSelection()" },
+        "DOMParser": { "args": [] },
+        "XMLSerializer": { "args": [] },
+        "Comment": { "args": [{ "type": "string" }] },
+        "Text": { "args": [{ "type": "string" }] },
+        "DocumentFragment": { "args": [] },
+        "FontFace": { "args": [{ "type": "string" }, { "type": "string" }] },
+        "Image": { "args": [] },
+        "Audio": { "args": [] },
+        "Option": { "args": [{ "type": "string" }, { "type": "string" }] },
+        "Event": { "args": [{ "type": "string" }] },
+        "CustomEvent": { "args": [{ "type": "string" }] },
+        "MouseEvent": { "args": [{ "type": "string" }] },
+        "KeyboardEvent": { "args": [{ "type": "string" }] },
+        "Uint8Array": { "args": [{ "type": "integer" }] },
+        "ArrayBuffer": { "args": [{ "type": "integer" }] },
+        "Blob": { "args": [{ "type": "array" }] },
+        "URL": { "args": [{ "type": "string" }] },
+        "Headers": { "args": [] },
+        "Request": { "args": [{ "type": "string" }] },
+        "AbortController": { "args": [] }
+    }
+}

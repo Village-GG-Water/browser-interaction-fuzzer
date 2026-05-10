@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Simulator Smoke Page</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 24px;
+      color: #1f2937;
+    }
+
+    main {
+      max-width: 720px;
+    }
+
+    button,
+    input,
+    textarea,
+    [contenteditable],
+    .drop-zone,
+    .drag-source {
+      display: block;
+      width: 100%;
+      box-sizing: border-box;
+      margin: 12px 0;
+      padding: 10px 12px;
+      border: 1px solid #9ca3af;
+      border-radius: 6px;
+      background: #ffffff;
+      font-size: 14px;
+    }
+
+    button {
+      width: auto;
+      cursor: pointer;
+    }
+
+    .drag-source {
+      width: 180px;
+      cursor: grab;
+      background: #eef6ff;
+    }
+
+    .drop-zone {
+      min-height: 72px;
+      background: #f8fafc;
+    }
+
+    #log {
+      min-height: 140px;
+      padding: 12px;
+      background: #111827;
+      color: #e5e7eb;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Simulator Smoke Page</h1>
+    <button id="click-target">Click target</button>
+    <input id="name-input" placeholder="type_text target">
+    <textarea id="note-input" rows="3" placeholder="textarea target"></textarea>
+    <div id="editable" contenteditable="true">contenteditable target</div>
+    <div id="drag-source" class="drag-source" draggable="true">drag me</div>
+    <div id="drop-target" class="drop-zone">drop here</div>
+    <pre id="log">ready</pre>
+  </main>
+
+  <script>
+    const log = document.getElementById("log");
+
+    function appendLog(message) {
+      log.textContent += "\n" + message;
+    }
+
+    document.getElementById("click-target").addEventListener("click", () => {
+      appendLog("button clicked");
+    });
+
+    document.getElementById("name-input").addEventListener("input", (event) => {
+      appendLog("name input: " + event.target.value);
+    });
+
+    document.getElementById("note-input").addEventListener("focus", () => {
+      appendLog("note focused");
+    });
+
+    document.getElementById("editable").addEventListener("input", () => {
+      appendLog("editable changed");
+    });
+
+    document.getElementById("drag-source").addEventListener("dragstart", (event) => {
+      event.dataTransfer.setData("text/plain", "drag-source");
+      appendLog("drag started");
+    });
+
+    document.getElementById("drop-target").addEventListener("dragover", (event) => {
+      event.preventDefault();
+    });
+
+    document.getElementById("drop-target").addEventListener("drop", (event) => {
+      event.preventDefault();
+      appendLog("drop received: " + event.dataTransfer.getData("text/plain"));
+    });
+  </script>
+</body>
+</html>

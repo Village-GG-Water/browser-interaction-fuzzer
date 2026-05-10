@@ -1,0 +1,327 @@
+use rand::Rng;
+use serde::{Deserialize, Serialize};
+
+use crate::fuzzing_engine::actions::{Action, ActionKind, ActionTarget};
+
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct InteractableMetadata {
+    pub selector: String,
+    pub tag: String,
+    #[serde(default)]
+    pub events: Vec<String>,
+    #[serde(default)]
+    pub is_text_input: bool,
+    #[serde(default)]
+    pub is_draggable: bool,
+    #[serde(default)]
+    pub is_drop_target: bool,
+    #[serde(default)]
+    pub is_focusable: bool,
+    #[serde(default)]
+    pub has_handler: bool,
+}
+
+const FALLBACK_SELECTORS: [&str; 12] = [
+    "button",
+    "input",
+    "textarea",
+    "div",
+    "iframe",
+    "a",
+    "img",
+    "canvas",
+    "video",
+    "audio",
+    "[contenteditable]",
+    "[draggable]",
+];
+
+const TEXTS: [&str; 7] = [
+    "test",
+    "fuzz",
+    "x",
+    "hello",
+    "123",
+    "<script>alert(1)</script>",
+    "",
+];
+
+const KEYS: [&str; 7] = [
+    "Enter",
+    "Escape",
+    "Tab",
+    "Backspace",
+    "Delete",
+    "ArrowUp",
+    "ArrowDown",
+];
+
+pub fn selectors_from_interactables(interactables: &[InteractableMetadata]) -> Vec<String> {
+    let mut selectors = Vec::new();
+    for item in interactables {
+        if !item.selector.is_empty() && !selectors.contains(&item.selector) {
+            selectors.push(item.selector.clone());
+        }
+    }
+    selectors
+}
+
+pub fn action_sequence_from_metadata<R: Rng + ?Sized>(
+    rng: &mut R,
+    base_count: usize,
+    interactables: &[InteractableMetadata],
+    action_hints: &[Action],
+) -> Vec<Action> {
+    let target_len = base_count.max(action_hints.len()).max(1);
+    let fallback_selectors = selectors_from_interactables(interactables);
+    let mut actions = Vec::with_capacity(target_len);
+
+    for hint in action_hints.iter().take(target_len) {
+        actions.push(hint.clone());
+    }
+
+    while actions.len() < target_len {
+        actions.push(random_action_from_metadata(
+            rng,
+            interactables,
+            &fallback_selectors,
+        ));
+    }
+
+    actions
+}
+
+pub fn mutate_action_sequence<R: Rng + ?Sized>(
+    rng: &mut R,
+    actions: &mut Vec<Action>,
+    max_actions: usize,
+    interactables: &[InteractableMetadata],
+) -> bool {
+    let selectors = selectors_from_interactables(interactables);
+    if actions.is_empty() {
+        actions.push(random_action_from_metadata(rng, interactables, &selectors));
+        return true;
+    }
+
+    match rng.gen_range(0..100) {
+        0..=29 => {
+            let idx = rng.gen_range(0..actions.len());
+            mutate_action_params(rng, &mut actions[idx], interactables, &selectors);
+            true
+        }
+        30..=59 => {
+            if actions.len() < max_actions {
+                let idx = rng.gen_range(0..=actions.len());
+                actions.insert(
+                    idx,
+                    random_action_from_metadata(rng, interactables, &selectors),
+                );
+            } else {
+                let idx = rng.gen_range(0..actions.len());
+                actions[idx] = random_action_from_metadata(rng, interactables, &selectors);
+            }
+            true
+        }
+        60..=79 => {
+            let idx = rng.gen_range(0..actions.len());
+            actions[idx] = random_action_from_metadata(rng, interactables, &selectors);
+            true
+        }
+        80..=89 if actions.len() > 1 => {
+            let a = rng.gen_range(0..actions.len());
+            let mut b = rng.gen_range(0..actions.len());
+            if a == b {
+                b = (b + 1) % actions.len();
+            }
+            actions.swap(a, b);
+            true
+        }
+        _ if actions.len() > 1 => {
+            let idx = rng.gen_range(0..actions.len());
+            actions.remove(idx);
+            true
+        }
+        _ => false,
+    }
+}
+
+fn random_action_from_metadata<R: Rng + ?Sized>(
+    rng: &mut R,
+    interactables: &[InteractableMetadata],
+    fallback_selectors: &[String],
+) -> Action {
+    if interactables.is_empty() {
+        return random_generic_action(rng, fallback_selectors);
+    }
+
+    let mut weights = Vec::new();
+    weights.extend(std::iter::repeat("click").take(14));
+    weights.extend(std::iter::repeat("hover").take(6));
+    weights.extend(std::iter::repeat("scroll").take(5));
+    weights.extend(std::iter::repeat("key").take(4));
+
+    if interactables.iter().any(|item| item.is_text_input) {
+        weights.extend(std::iter::repeat("type").take(12));
+        weights.extend(std::iter::repeat("clear").take(4));
+    }
+    if interactables
+        .iter()
+        .any(|item| item.is_focusable || item.has_handler)
+    {
+        weights.extend(std::iter::repeat("focus").take(6));
+    }
+    if interactables.iter().any(|item| item.is_draggable)
+        && interactables.iter().any(|item| item.is_drop_target)
+    {
+        weights.extend(std::iter::repeat("dragdrop").take(12));
+    }
+
+    match weights[rng.gen_range(0..weights.len())] {
+        "click" => Action::click(preferred_target(rng, interactables, fallback_selectors)),
+        "hover" => Action::hover(preferred_target(rng, interactables, fallback_selectors)),
+        "type" => Action::type_text(
+            target_matching(rng, interactables, |item| item.is_text_input)
+                .unwrap_or_else(|| preferred_target(rng, interactables, fallback_selectors)),
+            random_text(rng),
+        ),
+        "clear" => Action {
+            kind: ActionKind::Clear,
+            target: Some(
+                target_matching(rng, interactables, |item| item.is_text_input)
+                    .unwrap_or_else(|| preferred_target(rng, interactables, fallback_selectors)),
+            ),
+            to: None,
+            text: None,
+            key: None,
+            x: None,
+            y: None,
+            millis: None,
+        },
+        "focus" => Action::focus(
+            target_matching(rng, interactables, |item| {
+                item.is_focusable || item.has_handler
+            })
+            .unwrap_or_else(|| preferred_target(rng, interactables, fallback_selectors)),
+        ),
+        "dragdrop" => Action::drag_drop(
+            target_matching(rng, interactables, |item| item.is_draggable)
+                .unwrap_or_else(|| preferred_target(rng, interactables, fallback_selectors)),
+            target_matching(rng, interactables, |item| item.is_drop_target)
+                .unwrap_or_else(|| preferred_target(rng, interactables, fallback_selectors)),
+        ),
+        "scroll" => Action::scroll(
+            rng.gen_range(-500_i64..=500_i64),
+            rng.gen_range(-500_i64..=500_i64),
+        ),
+        "key" => Action::press_key(random_key(rng)),
+        _ => random_generic_action(rng, fallback_selectors),
+    }
+}
+
+fn random_generic_action<R: Rng + ?Sized>(rng: &mut R, selectors: &[String]) -> Action {
+    let target = random_dom_target(rng, selectors);
+    match rng.gen_range(0..12) {
+        0 => Action::click(target),
+        1 => Action::hover(target),
+        2 => Action::focus(target),
+        3 => Action::type_text(target, random_text(rng)),
+        4 => Action::scroll(
+            rng.gen_range(-500_i64..=500_i64),
+            rng.gen_range(-500_i64..=500_i64),
+        ),
+        5 => Action::press_key(random_key(rng)),
+        6 => Action::sleep(rng.gen_range(10_u64..=200_u64)),
+        _ => Action::click(target),
+    }
+}
+
+fn mutate_action_params<R: Rng + ?Sized>(
+    rng: &mut R,
+    action: &mut Action,
+    interactables: &[InteractableMetadata],
+    selectors: &[String],
+) {
+    match action.kind {
+        ActionKind::Click
+        | ActionKind::DoubleClick
+        | ActionKind::RightClick
+        | ActionKind::Clear
+        | ActionKind::ScrollIntoView
+        | ActionKind::Focus
+        | ActionKind::Blur
+        | ActionKind::Hover => {
+            action.target = Some(preferred_target(rng, interactables, selectors));
+        }
+        ActionKind::TypeText => {
+            if rng.gen_bool(0.5) {
+                action.target = Some(preferred_target(rng, interactables, selectors));
+            } else {
+                action.text = Some(random_text(rng));
+            }
+        }
+        ActionKind::DragDrop => {
+            if rng.gen_bool(0.5) {
+                action.target = Some(preferred_target(rng, interactables, selectors));
+            } else {
+                action.to = Some(preferred_target(rng, interactables, selectors));
+            }
+        }
+        ActionKind::Scroll => {
+            action.x = Some(action.x.unwrap_or(0) + rng.gen_range(-200_i64..=200_i64));
+            action.y = Some(action.y.unwrap_or(0) + rng.gen_range(-200_i64..=200_i64));
+        }
+        ActionKind::PressKey => action.key = Some(random_key(rng)),
+        ActionKind::Sleep => action.millis = Some(rng.gen_range(1_u64..=500_u64)),
+        ActionKind::Refresh | ActionKind::Back | ActionKind::Forward => {
+            *action = random_generic_action(rng, selectors);
+        }
+    }
+}
+
+fn preferred_target<R: Rng + ?Sized>(
+    rng: &mut R,
+    interactables: &[InteractableMetadata],
+    fallback_selectors: &[String],
+) -> ActionTarget {
+    target_matching(rng, interactables, |item| item.has_handler)
+        .or_else(|| target_matching(rng, interactables, |_| true))
+        .unwrap_or_else(|| random_dom_target(rng, fallback_selectors))
+}
+
+fn target_matching<R, F>(
+    rng: &mut R,
+    interactables: &[InteractableMetadata],
+    predicate: F,
+) -> Option<ActionTarget>
+where
+    R: Rng + ?Sized,
+    F: Fn(&InteractableMetadata) -> bool,
+{
+    let candidates: Vec<&InteractableMetadata> = interactables
+        .iter()
+        .filter(|item| predicate(item))
+        .collect();
+    if candidates.is_empty() {
+        return None;
+    }
+    Some(ActionTarget::dom(
+        candidates[rng.gen_range(0..candidates.len())]
+            .selector
+            .clone(),
+    ))
+}
+
+fn random_dom_target<R: Rng + ?Sized>(rng: &mut R, selectors: &[String]) -> ActionTarget {
+    if !selectors.is_empty() && rng.gen_range(0..100) < 80 {
+        return ActionTarget::dom(selectors[rng.gen_range(0..selectors.len())].clone());
+    }
+    ActionTarget::dom(FALLBACK_SELECTORS[rng.gen_range(0..FALLBACK_SELECTORS.len())])
+}
+
+fn random_text<R: Rng + ?Sized>(rng: &mut R) -> String {
+    TEXTS[rng.gen_range(0..TEXTS.len())].to_string()
+}
+
+fn random_key<R: Rng + ?Sized>(rng: &mut R) -> String {
+    KEYS[rng.gen_range(0..KEYS.len())].to_string()
+}

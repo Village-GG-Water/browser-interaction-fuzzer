@@ -22,7 +22,7 @@ crashes/                         crash 재현 artifact 저장소
 
 ## 환경 설정
 
-이 프로젝트는 `.env`로 실행 환경을 관리합니다. 기존 `action-fuzzer`의 브라우저 경로를 가져오되, 브라우저 확장을 위해 `CHROME_PATH` 대신 `BROWSER_PATH`를 사용합니다.
+이 프로젝트는 `.env`로 실행 환경을 관리합니다.
 
 ```env
 BROWSER_PATH=D:\programs\chromium\src\out\asan_cov\chrome.exe

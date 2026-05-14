@@ -10,6 +10,10 @@ import time
 from pathlib import Path
 from typing import Any
 
+from .browser_ui import BrowserUIBackend
+
+ui_backend = BrowserUIBackend()
+
 
 INTERACTABLE_CSS = (
     "a,button,input,textarea,select,details,summary,dialog,"
@@ -264,8 +268,10 @@ def execute_action(
     target = action.get("target")
 
     if target and target.get("space") == "browser_ui":
-        # 확장 지점: 접근성 API 기반 browser UI backend가 여기에 연결된다.
-        return False, 0
+        role = target.get("role")
+        name = target.get("name")
+        ok = ui_backend.execute(kind, role, name, timeout=timeout_ms / 1000)
+        return ok, 0
 
     try:
         if kind == "click":

@@ -7,7 +7,6 @@ use std::sync::{
     Arc,
     atomic::{AtomicBool, Ordering},
 };
-use std::time::{SystemTime, UNIX_EPOCH};
 
 use libafl::corpus::{Corpus, InMemoryCorpus, Testcase};
 use libafl::events::NopEventManager;
@@ -26,19 +25,18 @@ use rand::rngs::StdRng;
 
 use super::clients::{DomGeneratorClient, DomGeneratorConfig, SimulatorClient, SimulatorConfig};
 use super::config::AppConfig;
-use super::corpus::{CorpusSeed, CorpusStore, SeedMetadata};
 use super::coverage::{COVERAGE_MAP, COVERAGE_MAP_SIZE, CoverageTracker};
 use super::input::{DocumentSpec, FuzzInput};
 use super::libafl_executor::PlainExecutor;
 use super::metrics::RunMetrics;
 use super::mutation::{DefaultMutationStrategy, LibAflMutationAdapter, MutationStrategy};
 use super::reporting::Reporter;
+use super::seed_store::{SeedInput, SeedMetadata, SeedStore};
 use super::testcase_runner::{ExecutionOutcome, TestcaseRunner, save_crash_artifacts};
 use super::{EngineResult, engine_error};
 
 pub struct FuzzingApp {
     config: AppConfig,
-    corpus: CorpusStore,
     rng: StdRng,
     stop_requested: Arc<AtomicBool>,
 }
@@ -46,10 +44,8 @@ pub struct FuzzingApp {
 impl FuzzingApp {
     pub fn new(config: AppConfig) -> EngineResult<Self> {
         config.ensure_dirs()?;
-        let corpus = CorpusStore::new(config.corpus_dir.clone());
         Ok(Self {
             config,
-            corpus,
             rng: StdRng::from_entropy(),
             stop_requested: Arc::new(AtomicBool::new(false)),
         })
@@ -78,7 +74,6 @@ impl FuzzingApp {
             self.config.asan_dir.clone(),
         );
         let mut coverage = CoverageTracker::new();
-        let corpus_store = self.corpus.clone();
         let crash_dir = self.config.crash_dir.clone();
         let harness_metrics = Rc::clone(&metrics);
         let mut harness_iteration = 0_u64;
@@ -93,14 +88,9 @@ impl FuzzingApp {
                         ExitKind::Ok
                     };
                     let mut metrics = harness_metrics.borrow_mut();
-                    if let Err(error) = record_outcome(
-                        &corpus_store,
-                        &crash_dir,
-                        &mut metrics,
-                        harness_iteration,
-                        input,
-                        outcome,
-                    ) {
+                    if let Err(error) =
+                        record_outcome(&crash_dir, &mut metrics, harness_iteration, input, outcome)
+                    {
                         metrics.infra_errors += 1;
                         eprintln!(
                             "[executor] failed to record iteration {harness_iteration}: {error}"
@@ -174,17 +164,17 @@ impl FuzzingApp {
         &mut self,
         generator: &mut DomGeneratorClient,
         strategy: &DefaultMutationStrategy,
-    ) -> EngineResult<Vec<CorpusSeed>> {
-        let mut seeds = self.corpus.load_all()?;
+    ) -> EngineResult<Vec<SeedInput>> {
+        let mut seeds = self.load_initial_seed_dir()?;
         for seed in &seeds {
             Reporter::seed_loaded(&seed.spec.seed_id, &seed.metadata.source_kind);
         }
 
         while seeds.len() < self.config.seed_inputs {
-            let seed_id = self.corpus.next_seed_id("seed_generated_")?;
-            let seed_dir = self.create_generated_seed(&seed_id, generator, strategy)?;
+            let seed_id = format!("seed_generated_{:06}", seeds.len() + 1);
+            let seed = self.create_generated_seed(&seed_id, generator, strategy)?;
             Reporter::generated_seed(&seed_id);
-            seeds.push(self.corpus.load_seed(&seed_dir)?);
+            seeds.push(seed);
         }
 
         if seeds.is_empty() {
@@ -193,12 +183,19 @@ impl FuzzingApp {
         Ok(seeds)
     }
 
+    fn load_initial_seed_dir(&self) -> EngineResult<Vec<SeedInput>> {
+        let Some(seed_dir) = &self.config.initial_seed_dir else {
+            return Ok(Vec::new());
+        };
+        SeedStore::new(seed_dir.clone()).load_all()
+    }
+
     fn create_generated_seed(
         &mut self,
         seed_id: &str,
         generator: &mut DomGeneratorClient,
         strategy: &DefaultMutationStrategy,
-    ) -> EngineResult<PathBuf> {
+    ) -> EngineResult<SeedInput> {
         let work_dir = self.config.out_dir.join("seed_build").join(seed_id);
         fs::create_dir_all(&work_dir)?;
         let fdir_path = work_dir.join("document.fdir");
@@ -212,25 +209,31 @@ impl FuzzingApp {
             &doc.action_hints,
         );
         let source_kind = doc.id.clone().unwrap_or_else(|| "generated".to_string());
-        let metadata = SeedMetadata {
+        let metadata = SeedMetadata { source_kind };
+        let spec = super::input::TestcaseSpec {
             schema_version: 1,
             seed_id: seed_id.to_string(),
-            created_at: unix_timestamp_string(),
-            source_kind,
-            generator_version: "dom-generator-v1".to_string(),
-            coverage_edges: None,
-            crash_summary: None,
-        };
-        self.corpus.write_seed(
-            seed_id,
-            DocumentSpec::Fdir {
+            document: DocumentSpec::Fdir {
                 path: fdir_path.clone(),
             },
-            &actions,
-            &metadata,
-            Some(&snapshot_path),
-            Some(&fdir_path),
-        )
+            interaction_scope: vec![
+                super::input::InteractionScope::Dom,
+                super::input::InteractionScope::BrowserUi,
+            ],
+            actions_path: PathBuf::from("actions.json"),
+        };
+        let input = FuzzInput {
+            seed_id: seed_id.to_string(),
+            seed_dir: work_dir,
+            document: spec.document.clone(),
+            actions,
+            snapshot_path: Some(snapshot_path),
+        };
+        Ok(SeedInput {
+            spec,
+            metadata,
+            input,
+        })
     }
 
     fn install_ctrlc_handler(&self) -> EngineResult<()> {
@@ -258,7 +261,6 @@ impl FuzzingApp {
 }
 
 fn record_outcome(
-    corpus: &CorpusStore,
     crash_dir: &Path,
     metrics: &mut RunMetrics,
     iteration: u64,
@@ -275,26 +277,8 @@ fn record_outcome(
     );
 
     if outcome.new_coverage_edges > 0 {
-        let seed_id = corpus.next_seed_id("seed_cov_")?;
-        let metadata = SeedMetadata {
-            schema_version: 1,
-            seed_id: seed_id.clone(),
-            created_at: unix_timestamp_string(),
-            source_kind: "coverage".to_string(),
-            generator_version: "dom-generator-v1".to_string(),
-            coverage_edges: Some(outcome.new_coverage_edges as u64),
-            crash_summary: None,
-        };
-        corpus.write_seed(
-            &seed_id,
-            input.document.clone(),
-            &input.actions,
-            &metadata,
-            input.html_path(),
-            document_path_for_copy(input).as_deref(),
-        )?;
-        metrics.new_coverage_inputs += 1;
-        Reporter::new_coverage(&seed_id, outcome.new_coverage_edges);
+        metrics.new_coverage_events += 1;
+        Reporter::new_coverage(outcome.new_coverage_edges);
     }
 
     if outcome.is_crash() {
@@ -317,21 +301,6 @@ fn record_outcome(
     Ok(())
 }
 
-fn document_path_for_copy(input: &FuzzInput) -> Option<PathBuf> {
-    match &input.document {
-        DocumentSpec::Fdir { path } => Some(path.clone()),
-        DocumentSpec::NoDocument { .. } => None,
-    }
-}
-
 fn total_executions(metrics: &RunMetrics) -> u64 {
     metrics.iterations + metrics.infra_errors
-}
-
-fn unix_timestamp_string() -> String {
-    let seconds = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_secs();
-    format!("unix:{seconds}")
 }

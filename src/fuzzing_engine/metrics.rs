@@ -24,7 +24,7 @@ pub struct IterationTimings {
 pub struct RunMetrics {
     pub iterations: u64,
     pub corpus_size: usize,
-    pub new_coverage_inputs: u64,
+    pub new_coverage_events: u64,
     pub crashes: u64,
     pub infra_errors: u64,
     pub last_actions: usize,

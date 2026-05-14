@@ -13,20 +13,24 @@ impl Reporter {
             config.dom_generator_dir.display()
         );
         println!("[config] simulator={}", config.simulator_dir.display());
-        println!("[config] corpus={}", config.corpus_dir.display());
+        match &config.initial_seed_dir {
+            Some(seed_dir) => println!("[config] initial_seed_dir={}", seed_dir.display()),
+            None => println!("[config] initial_seed_dir=<generated>"),
+        }
+        println!("[config] libafl_corpus=in-memory");
         println!("[config] out={}", config.out_dir.display());
     }
 
     pub fn seed_loaded(seed_id: &str, source_kind: &str) {
-        println!("[corpus] loaded seed {seed_id} source={source_kind}");
+        println!("[seed] loaded {seed_id} source={source_kind}");
     }
 
     pub fn generated_seed(seed_id: &str) {
-        println!("[corpus] generated seed {seed_id}");
+        println!("[seed] generated {seed_id}");
     }
 
-    pub fn new_coverage(seed_id: &str, new_edges: usize) {
-        println!("[coverage] new edges={new_edges} saved_as={seed_id}");
+    pub fn new_coverage(new_edges: usize) {
+        println!("[coverage] new edges={new_edges}");
     }
 
     pub fn crash(iteration: u64, crash_type: &str, crash_dir: &std::path::Path) {
@@ -41,7 +45,7 @@ impl Reporter {
             "[progress] iter={} corpus={} new_cov={} crashes={} infra={} actions={} ok_actions={} fallbacks={} slow_actions={}",
             metrics.iterations,
             metrics.corpus_size,
-            metrics.new_coverage_inputs,
+            metrics.new_coverage_events,
             metrics.crashes,
             metrics.infra_errors,
             metrics.last_actions,
@@ -80,7 +84,7 @@ impl Reporter {
             "[summary] iter={} corpus={} new_cov={} crashes={} infra={}",
             metrics.iterations,
             metrics.corpus_size,
-            metrics.new_coverage_inputs,
+            metrics.new_coverage_events,
             metrics.crashes,
             metrics.infra_errors,
         );

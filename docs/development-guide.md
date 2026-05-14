@@ -7,7 +7,7 @@
 ```text
 fuzzing_engine (Rust + LibAFL)
   - LibAFL StdFuzzer/QueueScheduler 기반 fuzz loop
-  - seed/corpus 선택
+  - 초기 seed 생성/로드
   - mutation strategy 선택
   - DOM mutation op sequence 선택
   - action sequence 생성/변이
@@ -31,8 +31,11 @@ user-interaction-simulator (Python)
 
 seed 디렉토리 하나가 재현 가능한 브라우저 testcase 하나입니다.
 
+v1의 기본 fuzzing 실행은 filesystem corpus를 계속 읽고 쓰지 않습니다. 시작 시 dom-generator로 seed를 만들고 LibAFL `InMemoryCorpus`에 올립니다. 고정된 시작 seed가 필요할 때만 `.env`의 `INITIAL_SEED_DIR`로 아래 형식의 디렉토리를 지정합니다.
+
 ```text
-corpus/seeds/seed_000001/
+INITIAL_SEED_DIR/
+  seed_000001/
   testcase.json
   document.fdir
   actions.json
@@ -120,7 +123,7 @@ JSON-lines stdin/stdout을 사용합니다. stdout은 JSON response 전용이어
 ```json
 {
   "cmd": "mutate_document",
-  "source_path": "corpus/seeds/seed_000001/document.fdir",
+  "source_path": "out/seed_build/seed_generated_000001/document.fdir",
   "output_path": "out/iterations/000001/document.fdir",
   "ops": ["insert_element", "mutate_api_args"]
 }
@@ -196,7 +199,7 @@ UI-only testcase는 `html_path = null`이고 `initial_url`을 사용합니다.
 
 - `actions.rs`: action data model과 JSON wire format.
 - `input.rs`: LibAFL `Input`인 `FuzzInput`.
-- `corpus.rs`: seed 디렉토리 읽기/쓰기.
+- `seed_store.rs`: 선택적으로 지정된 초기 seed 디렉토리 읽기. fuzzing 중 새 corpus를 파일로 누적하지 않습니다.
 - `mutation/`: 모든 mutation 정책.
 - `mutation/libafl_mutator.rs`: mutation 정책을 LibAFL `Mutator`로 연결.
 - `clients/dom_generator.rs`: dom-generator IPC.
@@ -231,9 +234,13 @@ UI-only testcase는 `html_path = null`이고 `initial_url`을 사용합니다.
 
 이 확장이 들어오면 action target에도 page/tab context가 필요합니다.
 
-### Corpus 장기 포맷
+### Seed 장기 포맷
 
 `.fdir`은 Python pickle입니다. 구현은 빠르지만 dom-generator IR 변경에 취약합니다. 장기적으로는 replay 가능한 manifest 또는 JSON IR 포맷을 검토합니다.
+
+### Runtime corpus
+
+LibAFL이 말하는 corpus는 실행 중 scheduler와 feedback이 관리하는 runtime corpus입니다. v1은 `InMemoryCorpus<FuzzInput>`를 사용합니다. 파일 seed 디렉토리는 협업, 수동 재현, 시작 seed 주입을 위한 포맷이고, fuzzing 중 자동으로 증가하는 저장소로 쓰지 않습니다.
 
 ### Mutation history
 

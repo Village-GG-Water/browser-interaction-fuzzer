@@ -11,7 +11,7 @@ pub struct AppConfig {
     pub workspace_dir: PathBuf,
     pub out_dir: PathBuf,
     pub crash_dir: PathBuf,
-    pub corpus_dir: PathBuf,
+    pub initial_seed_dir: Option<PathBuf>,
     pub sancov_dir: PathBuf,
     pub asan_dir: PathBuf,
     pub dom_generator_dir: PathBuf,
@@ -48,7 +48,8 @@ impl AppConfig {
 
         let out_dir = path_var(&workspace_dir, &vars, "OUT_DIR", "out");
         let crash_dir = path_var(&workspace_dir, &vars, "CRASH_DIR", "crashes");
-        let corpus_dir = path_var(&workspace_dir, &vars, "CORPUS_DIR", "corpus/seeds");
+        let initial_seed_dir = optional_path_var(&workspace_dir, &vars, "INITIAL_SEED_DIR")
+            .or_else(|| optional_path_var(&workspace_dir, &vars, "SEED_DIR"));
 
         Ok(Self {
             dom_generator_dir: path_var(
@@ -80,7 +81,7 @@ impl AppConfig {
             workspace_dir,
             out_dir,
             crash_dir,
-            corpus_dir,
+            initial_seed_dir,
             browser_path,
             browser_kind,
         })
@@ -90,7 +91,6 @@ impl AppConfig {
         for dir in [
             &self.out_dir,
             &self.crash_dir,
-            &self.corpus_dir,
             &self.sancov_dir,
             &self.asan_dir,
             &self.uv_cache_dir,
@@ -152,6 +152,17 @@ fn path_var(root: &Path, vars: &HashMap<String, String>, key: &str, default: &st
     } else {
         root.join(path)
     }
+}
+
+fn optional_path_var(root: &Path, vars: &HashMap<String, String>, key: &str) -> Option<PathBuf> {
+    optional_var(vars, key).map(|raw| {
+        let path = PathBuf::from(raw);
+        if path.is_absolute() {
+            path
+        } else {
+            root.join(path)
+        }
+    })
 }
 
 fn usize_var(vars: &HashMap<String, String>, key: &str, default: usize) -> usize {

@@ -16,8 +16,8 @@ src/fuzzing_engine/              Rust/LibAFL fuzzing engine
 src/dom-generator/               Python DOM/HTML/CSS/JS generator
 src/user-interaction-simulator/  Python browser interaction runner
 docs/development-guide.md        협업용 개발 문서
-corpus/seeds/                    seed 단위 testcase 저장소
 crashes/                         crash 재현 artifact 저장소
+out/                             실행 중 생성되는 임시 문서와 SanCov/ASAN 작업 디렉토리
 ```
 
 ## 환경 설정
@@ -31,12 +31,17 @@ BROWSER_KIND=chromium
 
 필요한 값은 `.env.example`에 정리되어 있습니다.
 
+기본 실행은 파일 corpus를 읽지 않고 dom-generator로 초기 seed를 생성한 뒤 LibAFL의 in-memory corpus에서만 퍼징합니다. 고정 seed를 따로 읽고 싶을 때만 `.env`에 `INITIAL_SEED_DIR=...`를 지정합니다.
+
 ## Seed 구조
 
 seed 하나는 HTML 파일 하나가 아니라 “브라우저 테스트케이스 하나”입니다. 그래서 DOM 문서가 있는 seed와 browser UI만 조작하는 seed를 같은 구조에 넣을 수 있습니다.
 
+이 구조는 협업자가 재현용 seed를 직접 만들거나 `INITIAL_SEED_DIR`로 소량의 시작 seed를 넣을 때 쓰는 포맷입니다. fuzzing 중 새 coverage 입력은 v1에서 파일 seed로 계속 저장하지 않습니다.
+
 ```text
-corpus/seeds/seed_000001/
+INITIAL_SEED_DIR/
+  seed_000001/
   testcase.json
   document.fdir
   actions.json
@@ -55,6 +60,7 @@ corpus/seeds/seed_000001/
 Rust engine은 LibAFL 기반입니다.
 
 - `FuzzInput`: LibAFL `Input`입니다. seed 디렉토리의 testcase/actions/document 경로를 한 번 실행할 입력으로 들고 있습니다.
+- runtime corpus: LibAFL `InMemoryCorpus<FuzzInput>`입니다. 시작 시 생성한 seed 또는 `INITIAL_SEED_DIR`에서 읽은 seed만 넣고, 새 coverage 입력을 별도 파일 corpus로 누적하지 않습니다.
 - `LibAflMutationAdapter`: LibAFL `Mutator`입니다. mutation policy는 Rust가 선택하고, DOM op 적용은 dom-generator에 위임합니다.
 - `PlainExecutor`: simulator 실행 함수를 LibAFL `Executor`로 감쌉니다.
 - `TestcaseRunner`: simulator 실행 결과에서 ASAN/SanCov artifact, timing, crash 정보를 수집합니다.

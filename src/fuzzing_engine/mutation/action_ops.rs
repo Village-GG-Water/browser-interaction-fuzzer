@@ -72,7 +72,8 @@ pub fn action_sequence_from_metadata<R: Rng + ?Sized>(
     interactables: &[InteractableMetadata],
     action_hints: &[Action],
 ) -> Vec<Action> {
-    let target_len = base_count.max(action_hints.len()).max(1);
+    let max_len = base_count.max(1);
+    let target_len = rng.gen_range(1..=max_len);
     let fallback_selectors = selectors_from_interactables(interactables);
     let mut actions = Vec::with_capacity(target_len);
 
@@ -89,6 +90,40 @@ pub fn action_sequence_from_metadata<R: Rng + ?Sized>(
     }
 
     actions
+}
+
+#[cfg(test)]
+mod tests {
+    use rand::SeedableRng;
+    use rand::rngs::StdRng;
+
+    use super::*;
+
+    #[test]
+    fn initial_actions_stay_within_seed_budget_even_with_many_hints() {
+        let mut rng = StdRng::seed_from_u64(4);
+        let hints = vec![Action::scroll(0, 1); 10];
+
+        for _ in 0..32 {
+            let actions = action_sequence_from_metadata(&mut rng, 3, &[], &hints);
+            assert!((1..=3).contains(&actions.len()));
+        }
+    }
+
+    #[test]
+    fn action_insert_respects_current_budget() {
+        let mut rng = StdRng::seed_from_u64(9);
+        let mut actions = vec![
+            Action::scroll(0, 1),
+            Action::scroll(0, 2),
+            Action::scroll(0, 3),
+        ];
+
+        for _ in 0..32 {
+            mutate_action_sequence(&mut rng, &mut actions, 3, &[]);
+            assert!(actions.len() <= 3);
+        }
+    }
 }
 
 pub fn mutate_action_sequence<R: Rng + ?Sized>(

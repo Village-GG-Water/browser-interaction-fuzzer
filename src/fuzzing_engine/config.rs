@@ -69,7 +69,7 @@ impl AppConfig {
             uv_cache_dir: out_dir.join("uv-cache"),
             max_actions: usize_var(&vars, "MAX_ACTIONS", 48),
             seed_inputs: usize_var(&vars, "SEED_INPUTS", 1),
-            seed_actions: usize_var(&vars, "SEED_ACTIONS", 6),
+            seed_actions: usize_var(&vars, "SEED_ACTIONS", 3),
             max_iterations: max_iterations(&vars),
             iteration_timeout_ms: u64_var(&vars, "ITERATION_TIMEOUT_MS", 12000),
             action_timeout_ms: u64_var(&vars, "ACTION_TIMEOUT_MS", 300),

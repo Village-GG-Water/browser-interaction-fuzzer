@@ -22,7 +22,7 @@ from pathlib import Path
 # generator 패키지를 임포트하기 위해 프로젝트 루트를 path 에 추가
 sys.path.insert(0, str(Path(__file__).parent))
 
-from generator.config import GeneratorConfig
+from generator.config import CSSConfig, GeneratorConfig, JSConfig, TreeConfig
 from generator.gen.generator import DocumentGenerator
 from generator.mutate.mutator import Mutator
 from generator.lower.html_writer import render
@@ -108,7 +108,9 @@ def _handle(req: dict, gen: DocumentGenerator, mutator: Mutator) -> dict:
     cmd = req.get("cmd")
 
     if cmd == "generate_document":
-        doc = gen.generate()
+        budget = req.get("budget")
+        local_gen = DocumentGenerator(_config_from_budget(budget)) if budget else gen
+        doc = local_gen.generate()
         output_fdir = req.get("output_fdir")
         if output_fdir:
             _save_document_path(doc, output_fdir)
@@ -192,6 +194,47 @@ def _document_response(doc, corpus_id: str | None = None) -> dict:
         "html": render(doc),
         "interactables": interactables,
         "action_hints": action_hints,
+        "stats": _document_stats(doc),
+    }
+
+
+def _config_from_budget(budget: dict) -> GeneratorConfig:
+    tree = TreeConfig(
+        min_elements=_int_budget(budget, "min_elements", 3),
+        max_elements=_int_budget(budget, "max_elements", 5),
+        max_depth=_int_budget(budget, "max_depth", 2),
+        max_attributes=_int_budget(budget, "max_attributes", 2),
+        svg_prob=0.0,
+    )
+    css = CSSConfig(
+        max_rules=_int_budget(budget, "max_css_rules", 0),
+        min_rules=0,
+        max_keyframes=_int_budget(budget, "max_keyframes", 0),
+        num_css_variables=_int_budget(budget, "max_css_variables", 0),
+    )
+    js = JSConfig(
+        num_handlers=_int_budget(budget, "max_handlers", 2),
+        min_api_calls_per_handler=_int_budget(budget, "min_handler_statements", 3),
+        max_api_calls_per_handler=_int_budget(budget, "max_handler_statements", 5),
+    )
+    return GeneratorConfig(tree=tree, css=css, js=js)
+
+
+def _int_budget(budget: dict, key: str, default: int) -> int:
+    try:
+        return max(0, int(budget.get(key, default)))
+    except (TypeError, ValueError):
+        return default
+
+
+def _document_stats(doc) -> dict:
+    handlers = list(getattr(doc, "event_handlers", []))
+    return {
+        "element_count": len(list(doc.dom_tree.walk())) if getattr(doc, "dom_tree", None) else 0,
+        "handler_count": len(handlers),
+        "handler_statement_count": sum(len(getattr(h, "statements", [])) for h in handlers),
+        "css_rule_count": len(getattr(doc, "css_rules", [])),
+        "keyframe_count": len(getattr(doc, "css_keyframes", [])),
     }
 
 

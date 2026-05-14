@@ -81,6 +81,8 @@ impl SeedStore {
                 document: absolute_document(seed_dir, &spec.document),
                 actions,
                 snapshot_path,
+                document_stats: None,
+                mutation_phase: None,
             },
             spec,
             metadata,

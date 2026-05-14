@@ -30,7 +30,10 @@ use super::coverage::{COVERAGE_MAP, COVERAGE_MAP_SIZE, CoverageTracker};
 use super::input::{DocumentSpec, FuzzInput};
 use super::libafl_executor::PlainExecutor;
 use super::metrics::RunMetrics;
-use super::mutation::{DefaultMutationStrategy, LibAflMutationAdapter, MutationStrategy};
+use super::mutation::{
+    DefaultMutationStrategy, LibAflMutationAdapter, MutationPhase, MutationPolicyState,
+    MutationStrategy,
+};
 use super::reporting::Reporter;
 use super::seed_store::{SeedInput, SeedMetadata, SeedStore};
 use super::testcase_runner::{ExecutionOutcome, TestcaseRunner, save_crash_artifacts};
@@ -68,13 +71,20 @@ impl FuzzingApp {
             generator_dir: self.config.dom_generator_dir.clone(),
             uv_cache_dir: self.config.uv_cache_dir.clone(),
         };
+        let policy = Rc::new(RefCell::new(MutationPolicyState::new(
+            self.config.max_actions,
+        )));
         let mut seed_generator = DomGeneratorClient::spawn(&generator_config)?;
         let strategy = DefaultMutationStrategy::new();
-        let seeds = self.load_or_create_initial_seeds(&mut seed_generator, &strategy)?;
+        let seeds = self.load_or_create_initial_seeds(&mut seed_generator, &strategy, &policy)?;
         let _ = seed_generator.shutdown();
 
         let metrics = Rc::new(RefCell::new(RunMetrics::default()));
-        metrics.borrow_mut().corpus_size = seeds.len();
+        {
+            let mut metrics = metrics.borrow_mut();
+            metrics.corpus_size = seeds.len();
+            metrics.policy_snapshot = Some(policy.borrow().snapshot());
+        }
 
         let simulator = SimulatorClient::spawn(&SimulatorConfig::from_app_config(&self.config))?;
         let mut testcase_runner = TestcaseRunner::new(
@@ -86,6 +96,7 @@ impl FuzzingApp {
         let crash_session_dir = crash_session_dir.clone();
         let session_id = self.session_id.clone();
         let harness_metrics = Rc::clone(&metrics);
+        let harness_policy = Rc::clone(&policy);
         let mut harness_iteration = 0_u64;
 
         let harness = move |input: &FuzzInput| -> ExitKind {
@@ -102,6 +113,7 @@ impl FuzzingApp {
                         &session_id,
                         &crash_session_dir,
                         &mut metrics,
+                        &harness_policy,
                         harness_iteration,
                         input,
                         outcome,
@@ -161,6 +173,7 @@ impl FuzzingApp {
                 self.config.out_dir.clone(),
                 self.config.max_actions,
                 self.config.seed_actions,
+                Rc::clone(&policy),
             )?,
             NonZeroUsize::new(1).expect("1 is non-zero"),
         ));
@@ -179,6 +192,7 @@ impl FuzzingApp {
         &mut self,
         generator: &mut DomGeneratorClient,
         strategy: &DefaultMutationStrategy,
+        policy: &Rc<RefCell<MutationPolicyState>>,
     ) -> EngineResult<Vec<SeedInput>> {
         let mut seeds = self.load_initial_seed_dir()?;
         for seed in &seeds {
@@ -187,7 +201,7 @@ impl FuzzingApp {
 
         while seeds.len() < self.config.seed_inputs {
             let seed_id = format!("seed_generated_{:06}", seeds.len() + 1);
-            let seed = self.create_generated_seed(&seed_id, generator, strategy)?;
+            let seed = self.create_generated_seed(&seed_id, generator, strategy, policy)?;
             Reporter::generated_seed(&seed_id);
             seeds.push(seed);
         }
@@ -210,12 +224,14 @@ impl FuzzingApp {
         seed_id: &str,
         generator: &mut DomGeneratorClient,
         strategy: &DefaultMutationStrategy,
+        policy: &Rc<RefCell<MutationPolicyState>>,
     ) -> EngineResult<SeedInput> {
         let work_dir = self.config.out_dir.join("seed_build").join(seed_id);
         fs::create_dir_all(&work_dir)?;
         let fdir_path = work_dir.join("document.fdir");
         let snapshot_path = work_dir.join("snapshot.html");
-        let doc = generator.generate_document(Some(&fdir_path))?;
+        let budget = policy.borrow().initial_generation_budget();
+        let doc = generator.generate_document(Some(&fdir_path), Some(budget))?;
         fs::write(&snapshot_path, &doc.html)?;
         let actions = strategy.initial_actions(
             &mut self.rng,
@@ -243,6 +259,8 @@ impl FuzzingApp {
             document: spec.document.clone(),
             actions,
             snapshot_path: Some(snapshot_path),
+            document_stats: Some(doc.stats),
+            mutation_phase: None,
         };
         Ok(SeedInput {
             spec,
@@ -279,6 +297,7 @@ fn record_outcome(
     session_id: &str,
     crash_session_dir: &Path,
     metrics: &mut RunMetrics,
+    policy: &Rc<RefCell<MutationPolicyState>>,
     iteration: u64,
     input: &FuzzInput,
     outcome: ExecutionOutcome,
@@ -295,6 +314,15 @@ fn record_outcome(
     if outcome.new_coverage_edges > 0 {
         metrics.new_coverage_events += 1;
         Reporter::new_coverage(outcome.new_coverage_edges);
+    }
+    let phase = input
+        .mutation_phase
+        .as_deref()
+        .and_then(MutationPhase::from_str);
+    {
+        let mut policy = policy.borrow_mut();
+        policy.record_result(phase, outcome.new_coverage_edges > 0);
+        metrics.policy_snapshot = Some(policy.snapshot());
     }
 
     if outcome.is_crash() {

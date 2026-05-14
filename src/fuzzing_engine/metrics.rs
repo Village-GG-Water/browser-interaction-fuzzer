@@ -32,6 +32,7 @@ pub struct RunMetrics {
     pub last_selector_fallbacks: u64,
     pub last_slow_actions: u64,
     pub recent_timings: Vec<IterationTimings>,
+    pub policy_snapshot: Option<MutationPolicySnapshot>,
 }
 
 impl RunMetrics {
@@ -160,3 +161,4 @@ mod tests {
         assert_eq!(summary.p95, 40);
     }
 }
+use super::mutation::policy::MutationPolicySnapshot;

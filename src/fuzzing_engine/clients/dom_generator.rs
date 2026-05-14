@@ -6,6 +6,8 @@ use std::time::{Duration, Instant};
 use serde::Deserialize;
 
 use crate::fuzzing_engine::actions::Action;
+use crate::fuzzing_engine::input::DocumentStats;
+use crate::fuzzing_engine::mutation::DomGenerationBudget;
 use crate::fuzzing_engine::mutation::{DomMutationOp, InteractableMetadata, protocol_op_names};
 use crate::fuzzing_engine::{EngineResult, engine_error};
 
@@ -23,6 +25,8 @@ pub struct GeneratedDocument {
     pub interactables: Vec<InteractableMetadata>,
     #[serde(default)]
     pub action_hints: Vec<Action>,
+    #[serde(default)]
+    pub stats: DocumentStats,
 }
 
 pub struct DomGeneratorClient {
@@ -54,10 +58,12 @@ impl DomGeneratorClient {
     pub fn generate_document(
         &mut self,
         output_fdir: Option<&Path>,
+        budget: Option<DomGenerationBudget>,
     ) -> EngineResult<GeneratedDocument> {
         self.send(&serde_json::json!({
             "cmd": "generate_document",
             "output_fdir": output_fdir.map(|path| path.to_string_lossy().to_string()),
+            "budget": budget,
         }))?;
         self.document_response("generate_document")
     }

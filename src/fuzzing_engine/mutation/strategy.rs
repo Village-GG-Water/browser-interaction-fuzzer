@@ -3,8 +3,10 @@ use rand::Rng;
 use super::action_ops::{
     InteractableMetadata, action_sequence_from_metadata, mutate_action_sequence,
 };
+use super::policy::{DomMutationBudget, MutationPhase};
 use super::scheduler::{MutationPlan, MutationScheduler};
 use crate::fuzzing_engine::actions::Action;
+use crate::fuzzing_engine::input::DocumentStats;
 
 pub trait MutationStrategy {
     fn initial_actions<R: Rng + ?Sized>(
@@ -15,7 +17,14 @@ pub trait MutationStrategy {
         action_hints: &[Action],
     ) -> Vec<Action>;
 
-    fn plan<R: Rng + ?Sized>(&self, rng: &mut R, document_available: bool) -> MutationPlan;
+    fn plan<R: Rng + ?Sized>(
+        &self,
+        rng: &mut R,
+        phase: MutationPhase,
+        document_available: bool,
+        stats: Option<DocumentStats>,
+        budget: DomMutationBudget,
+    ) -> MutationPlan;
 
     fn mutate_actions<R: Rng + ?Sized>(
         &self,
@@ -49,8 +58,16 @@ impl MutationStrategy for DefaultMutationStrategy {
         action_sequence_from_metadata(rng, seed_actions, interactables, action_hints)
     }
 
-    fn plan<R: Rng + ?Sized>(&self, rng: &mut R, document_available: bool) -> MutationPlan {
-        self.scheduler.choose(rng, document_available)
+    fn plan<R: Rng + ?Sized>(
+        &self,
+        rng: &mut R,
+        phase: MutationPhase,
+        document_available: bool,
+        stats: Option<DocumentStats>,
+        budget: DomMutationBudget,
+    ) -> MutationPlan {
+        self.scheduler
+            .choose(rng, phase, document_available, stats, budget)
     }
 
     fn mutate_actions<R: Rng + ?Sized>(

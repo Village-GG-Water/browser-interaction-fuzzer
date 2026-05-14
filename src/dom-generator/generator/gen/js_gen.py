@@ -48,6 +48,8 @@ class JSGenerator:
         next_id = 0
 
         for elem in targets:
+            if len(handlers) >= self.cfg.num_handlers:
+                break
             event_count = 1
             if self.rng.random() < 0.35:
                 event_count += 1
@@ -57,6 +59,8 @@ class JSGenerator:
 
             used_events = set()
             for _ in range(event_count):
+                if len(handlers) >= self.cfg.num_handlers:
+                    break
                 event = self._pick_unused_event(events, used_events)
                 if event is None:
                     break
@@ -127,7 +131,8 @@ class JSGenerator:
     ) -> list[Statement]:
         """이벤트 핸들러 내부 API 호출 시퀀스를 생성한다."""
         stmts: list[Statement] = []
-        max_stmts = self.rng.randint(5, self.cfg.max_api_calls_per_handler)
+        min_calls = max(0, min(self.cfg.min_api_calls_per_handler, self.cfg.max_api_calls_per_handler))
+        max_stmts = self.rng.randint(min_calls, self.cfg.max_api_calls_per_handler)
 
         for _ in range(max_stmts):
             stmt = self._pick_statement(ctx, jctx)

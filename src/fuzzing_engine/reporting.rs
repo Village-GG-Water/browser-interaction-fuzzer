@@ -49,7 +49,7 @@ impl Reporter {
 
     pub fn progress(metrics: &RunMetrics) {
         println!(
-            "[progress] iter={} corpus={} new_cov={} crashes={} infra={} actions={} ok_actions={} fallbacks={} slow_actions={}",
+            "[progress] iter={} corpus={} new_cov={} crashes={} infra={} actions={} ok_actions={} fallbacks={} slow_actions={}{}",
             metrics.iterations,
             metrics.corpus_size,
             metrics.new_coverage_events,
@@ -59,6 +59,7 @@ impl Reporter {
             metrics.last_action_successes,
             metrics.last_selector_fallbacks,
             metrics.last_slow_actions,
+            policy_suffix(metrics),
         );
         Self::timing(metrics);
     }
@@ -88,12 +89,31 @@ impl Reporter {
 
     pub fn summary(metrics: &RunMetrics) {
         println!(
-            "[summary] iter={} corpus={} new_cov={} crashes={} infra={}",
+            "[summary] iter={} corpus={} new_cov={} crashes={} infra={}{}",
             metrics.iterations,
             metrics.corpus_size,
             metrics.new_coverage_events,
             metrics.crashes,
             metrics.infra_errors,
+            policy_suffix(metrics),
         );
     }
+}
+
+fn policy_suffix(metrics: &RunMetrics) -> String {
+    let Some(snapshot) = metrics.policy_snapshot else {
+        return String::new();
+    };
+    format!(
+        " action_budget={} dom_budget=elements:{},handlers:{},css:{} stagnation={} phase=dom:{}/{} user:{}/{}",
+        snapshot.action_budget,
+        snapshot.dom_budget.max_elements,
+        snapshot.dom_budget.max_handlers,
+        snapshot.dom_budget.max_css_rules,
+        snapshot.stagnation_runs,
+        snapshot.phase_stats.dom_successes,
+        snapshot.phase_stats.dom_failures,
+        snapshot.phase_stats.user_successes,
+        snapshot.phase_stats.user_failures,
+    )
 }

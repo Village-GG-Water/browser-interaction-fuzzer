@@ -21,6 +21,7 @@ class TreeConfig:
 @dataclass
 class CSSConfig:
     max_rules: int = 50
+    min_rules: int = 10
     max_selectors_per_rule: int = 3
     max_declarations_per_rule: int = 20
     max_keyframes: int = 5
@@ -33,6 +34,8 @@ class CSSConfig:
 class JSConfig:
     # 이벤트 핸들러 개수 (f0 ~ f{n-1})
     num_handlers: int = 5
+    # 핸들러당 최소 API 호출 수
+    min_api_calls_per_handler: int = 5
     # 핸들러당 최대 API 호출 수
     max_api_calls_per_handler: int = 30
     # 로컬 변수 바인딩 최대 개수 (핸들러당)

@@ -36,7 +36,7 @@ class CSSGenerator:
 
     def generate_variables(self, ctx: GlobalContext) -> CSSVariables:
         variables = {}
-        for name in _CSS_VAR_NAMES:
+        for name in _CSS_VAR_NAMES[:max(0, self.cfg.num_css_variables)]:
             default = _CSS_VAR_DEFAULTS[name]
             if "color" in name:
                 val = self.vg.color()
@@ -52,7 +52,10 @@ class CSSGenerator:
     # ── Gc1: 규칙 생성 ────────────────────────────────────────────────────
 
     def generate_rules(self, ctx: GlobalContext) -> list[CSSRule]:
-        count = self.rng.randint(10, self.cfg.max_rules)
+        if self.cfg.max_rules <= 0:
+            return []
+        min_rules = min(max(0, self.cfg.min_rules), self.cfg.max_rules)
+        count = self.rng.randint(min_rules, self.cfg.max_rules)
         return [self.gc1_new_rule(ctx) for _ in range(count)]
 
     def gc1_new_rule(self, ctx: GlobalContext) -> CSSRule:
@@ -80,6 +83,8 @@ class CSSGenerator:
     # ── keyframes 생성 ────────────────────────────────────────────────────
 
     def generate_keyframes(self, ctx: GlobalContext) -> list[CSSKeyframesRule]:
+        if self.cfg.max_keyframes <= 0:
+            return []
         count = self.rng.randint(0, self.cfg.max_keyframes)
         result = []
         for _ in range(count):

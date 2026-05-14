@@ -42,6 +42,20 @@ pub struct TestcaseSpec {
     pub actions_path: PathBuf,
 }
 
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct DocumentStats {
+    #[serde(default)]
+    pub element_count: usize,
+    #[serde(default)]
+    pub handler_count: usize,
+    #[serde(default)]
+    pub handler_statement_count: usize,
+    #[serde(default)]
+    pub css_rule_count: usize,
+    #[serde(default)]
+    pub keyframe_count: usize,
+}
+
 #[derive(Debug, Clone, Hash, Serialize, Deserialize)]
 pub struct FuzzInput {
     pub seed_id: String,
@@ -49,6 +63,10 @@ pub struct FuzzInput {
     pub document: DocumentSpec,
     pub actions: Vec<Action>,
     pub snapshot_path: Option<PathBuf>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub document_stats: Option<DocumentStats>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub mutation_phase: Option<String>,
 }
 
 impl Input for FuzzInput {}

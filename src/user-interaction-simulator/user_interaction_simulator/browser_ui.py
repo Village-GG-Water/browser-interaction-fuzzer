@@ -20,7 +20,7 @@ class BrowserUIBackend:
                 logging.error(f"AT-SPI 초기화 실패: {e}")
 
     def _get_role(self, role_name):
-        if not HAS_ATSPI: return None
+        if not HAS_ATSPI or role_name is None: return None
         mapping = {
             "push button": Atspi.Role.PUSH_BUTTON,
             "entry": Atspi.Role.ENTRY,
@@ -32,5 +32,5 @@ class BrowserUIBackend:
 
     def execute(self, kind, role_name, element_name, timeout=5):
         if not HAS_ATSPI or not self.desktop:
-            return False, "AT-SPI not available"
-        return False, "Not implemented yet"
+            return False
+        return False

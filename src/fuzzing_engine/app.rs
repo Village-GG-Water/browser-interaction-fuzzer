@@ -7,6 +7,7 @@ use std::sync::{
     Arc,
     atomic::{AtomicBool, Ordering},
 };
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use libafl::corpus::{Corpus, InMemoryCorpus, Testcase};
 use libafl::events::NopEventManager;
@@ -37,6 +38,7 @@ use super::{EngineResult, engine_error};
 
 pub struct FuzzingApp {
     config: AppConfig,
+    session_id: String,
     rng: StdRng,
     stop_requested: Arc<AtomicBool>,
 }
@@ -46,6 +48,7 @@ impl FuzzingApp {
         config.ensure_dirs()?;
         Ok(Self {
             config,
+            session_id: new_session_id(),
             rng: StdRng::from_entropy(),
             stop_requested: Arc::new(AtomicBool::new(false)),
         })
@@ -53,6 +56,12 @@ impl FuzzingApp {
 
     pub fn run(&mut self) -> EngineResult<()> {
         Reporter::print_config(&self.config);
+        let crash_session_dir = self
+            .config
+            .crash_dir
+            .join(format!("session_{}", self.session_id));
+        fs::create_dir_all(&crash_session_dir)?;
+        Reporter::session_started(&self.session_id, &crash_session_dir);
         self.install_ctrlc_handler()?;
 
         let generator_config = DomGeneratorConfig {
@@ -74,7 +83,8 @@ impl FuzzingApp {
             self.config.asan_dir.clone(),
         );
         let mut coverage = CoverageTracker::new();
-        let crash_dir = self.config.crash_dir.clone();
+        let crash_session_dir = crash_session_dir.clone();
+        let session_id = self.session_id.clone();
         let harness_metrics = Rc::clone(&metrics);
         let mut harness_iteration = 0_u64;
 
@@ -88,9 +98,14 @@ impl FuzzingApp {
                         ExitKind::Ok
                     };
                     let mut metrics = harness_metrics.borrow_mut();
-                    if let Err(error) =
-                        record_outcome(&crash_dir, &mut metrics, harness_iteration, input, outcome)
-                    {
+                    if let Err(error) = record_outcome(
+                        &session_id,
+                        &crash_session_dir,
+                        &mut metrics,
+                        harness_iteration,
+                        input,
+                        outcome,
+                    ) {
                         metrics.infra_errors += 1;
                         eprintln!(
                             "[executor] failed to record iteration {harness_iteration}: {error}"
@@ -261,7 +276,8 @@ impl FuzzingApp {
 }
 
 fn record_outcome(
-    crash_dir: &Path,
+    session_id: &str,
+    crash_session_dir: &Path,
     metrics: &mut RunMetrics,
     iteration: u64,
     input: &FuzzInput,
@@ -284,7 +300,8 @@ fn record_outcome(
     if outcome.is_crash() {
         metrics.crashes += 1;
         let case_dir = save_crash_artifacts(
-            crash_dir,
+            session_id,
+            crash_session_dir,
             iteration,
             input,
             &input.actions,
@@ -303,4 +320,12 @@ fn record_outcome(
 
 fn total_executions(metrics: &RunMetrics) -> u64 {
     metrics.iterations + metrics.infra_errors
+}
+
+fn new_session_id() -> String {
+    let millis = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_millis();
+    format!("{millis}_{}", std::process::id())
 }

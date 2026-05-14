@@ -21,6 +21,13 @@ impl Reporter {
         println!("[config] out={}", config.out_dir.display());
     }
 
+    pub fn session_started(session_id: &str, crash_session_dir: &std::path::Path) {
+        println!(
+            "[session] id={session_id} crashes={}",
+            crash_session_dir.display()
+        );
+    }
+
     pub fn seed_loaded(seed_id: &str, source_kind: &str) {
         println!("[seed] loaded {seed_id} source={source_kind}");
     }

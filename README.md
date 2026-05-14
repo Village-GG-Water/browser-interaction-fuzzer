@@ -16,7 +16,7 @@ src/fuzzing_engine/              Rust/LibAFL fuzzing engine
 src/dom-generator/               Python DOM/HTML/CSS/JS generator
 src/user-interaction-simulator/  Python browser interaction runner
 docs/development-guide.md        협업용 개발 문서
-crashes/                         crash 재현 artifact 저장소
+crashes/session_<id>/            실행 세션별 crash 재현 artifact 저장소
 out/                             실행 중 생성되는 임시 문서와 SanCov/ASAN 작업 디렉토리
 ```
 
@@ -66,6 +66,19 @@ Rust engine은 LibAFL 기반입니다.
 - `TestcaseRunner`: simulator 실행 결과에서 ASAN/SanCov artifact, timing, crash 정보를 수집합니다.
 - `MaxMapFeedback`: SanCov PC를 Rust coverage map에 반영해서 새로운 coverage를 판단합니다.
 - `CrashFeedback`: simulator timeout/crash와 ASAN 결과를 crash objective로 연결합니다.
+
+crash artifact는 fuzzing engine 시작 시 부여된 session id 아래에 저장됩니다.
+
+```text
+crashes/session_1778191810093_12345/
+  crash_000001/
+    metadata.json
+    actions.json
+    simulator-response.json
+    snapshot.html
+    document.fdir
+    asan.txt
+```
 
 ## 자주 쓰는 명령
 

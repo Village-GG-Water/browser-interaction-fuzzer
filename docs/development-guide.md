@@ -209,6 +209,28 @@ UI-only testcase는 `html_path = null`이고 `initial_url`을 사용합니다.
 - `metrics.rs`: 수치 수집과 avg/p95 계산.
 - `reporting.rs`: 사람이 읽는 실행 상태 출력.
 
+## Crash artifact
+
+fuzzing engine은 시작할 때마다 session id를 하나 부여합니다. crash objective에 걸린 입력은 같은 세션 안에 저장합니다.
+
+```text
+crashes/
+  session_1778191810093_12345/
+    crash_000001/
+      metadata.json
+      actions.json
+      simulator-response.json
+      snapshot.html
+      document.fdir
+      asan.txt
+```
+
+- `metadata.json`: `session_id`, `iteration`, `seed_id`, simulator `status`, crash type, ASAN source/hash를 저장합니다.
+- `actions.json`: crash 당시 실행한 action sequence입니다.
+- `simulator-response.json`: simulator가 반환한 원본 실행 결과입니다.
+- `snapshot.html`, `document.fdir`: DOM seed일 때만 저장됩니다.
+- `asan.txt`: ASAN report가 있을 때만 저장됩니다.
+
 ## 향후 확장
 
 ### Browser UI backend

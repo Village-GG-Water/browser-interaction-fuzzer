@@ -98,14 +98,15 @@ impl TestcaseRunner {
 }
 
 pub fn save_crash_artifacts(
-    crash_dir: &Path,
+    session_id: &str,
+    crash_session_dir: &Path,
     iteration: u64,
     input: &FuzzInput,
     actions: &[Action],
     response: &SimulatorResponse,
     classified_crash: Option<&ClassifiedCrash>,
 ) -> EngineResult<PathBuf> {
-    let case_dir = crash_dir.join(format!("crash_{iteration:06}"));
+    let case_dir = crash_session_dir.join(format!("crash_{iteration:06}"));
     fs::create_dir_all(&case_dir)?;
 
     if let Some(snapshot) = input.html_path()
@@ -134,27 +135,34 @@ pub fn save_crash_artifacts(
         serde_json::to_string_pretty(response)?,
     )?;
 
-    if let Some(crash) = classified_crash {
+    let metadata = if let Some(crash) = classified_crash {
         fs::write(case_dir.join("asan.txt"), &crash.report.excerpt)?;
-        fs::write(
-            case_dir.join("metadata.json"),
-            format!(
-                "{{\n  \"iteration\": {iteration},\n  \"seed_id\": \"{}\",\n  \"crash_type\": \"{}\",\n  \"stack_hash\": \"{:016x}\",\n  \"asan_source\": \"{}\"\n}}\n",
-                input.seed_id,
-                crash.crash_type.as_str(),
-                crash.stack_hash,
-                escape_json_string(&crash.report.source),
-            ),
-        )?;
-    }
+        serde_json::json!({
+            "session_id": session_id,
+            "iteration": iteration,
+            "seed_id": input.seed_id,
+            "status": response.status,
+            "crash_type": crash.crash_type.as_str(),
+            "stack_hash": format!("{:016x}", crash.stack_hash),
+            "asan_source": crash.report.source,
+        })
+    } else {
+        serde_json::json!({
+            "session_id": session_id,
+            "iteration": iteration,
+            "seed_id": input.seed_id,
+            "status": response.status,
+            "crash_type": null,
+        })
+    };
+    fs::write(
+        case_dir.join("metadata.json"),
+        serde_json::to_string_pretty(&metadata)?,
+    )?;
 
     Ok(case_dir)
 }
 
 fn elapsed_ms(started: Instant) -> u64 {
     started.elapsed().as_millis().try_into().unwrap_or(u64::MAX)
-}
-
-fn escape_json_string(value: &str) -> String {
-    value.replace('\\', "\\\\").replace('"', "\\\"")
 }

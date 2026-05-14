@@ -29,6 +29,7 @@
 - simulator 실행은 `libafl_executor.rs`의 LibAFL `Executor` adapter를 통해 연결합니다. `testcase_runner.rs`는 한 testcase 실행 결과에서 ASAN/SanCov/timing을 수집하는 runner입니다. custom while-loop fuzzer로 되돌리지 마세요.
 - 새 mutation 전략은 `mutation/strategy.rs`와 `mutation/scheduler.rs`를 통해 추가합니다.
 - timing, action success, fallback, slow action 같은 병목 분석 값은 `metrics.rs`에 수집하고 `reporting.rs`에서 출력합니다.
+- crash artifact는 반드시 `crashes/session_<session_id>/crash_<iteration>/` 아래에 저장합니다. 서로 다른 fuzzing 실행의 crash를 같은 디렉토리에 섞지 마세요.
 
 ## Python 작업 규칙
 

@@ -46,6 +46,12 @@ impl Reporter {
         report!("[coverage] iteration={iteration} new_edges={new_edges}");
     }
 
+    pub fn new_hazard(iteration: u64, boundary: &str, stale_reuse_candidates: usize) {
+        report!(
+            "[hazard] iteration={iteration} boundary={boundary} stale_reuse_candidates={stale_reuse_candidates}"
+        );
+    }
+
     pub fn crash(iteration: u64, crash_type: &str, crash_dir: &std::path::Path) {
         report!(
             "[crash] iteration={iteration} type={crash_type} saved={}",
@@ -55,16 +61,19 @@ impl Reporter {
 
     pub fn progress(metrics: &RunMetrics) {
         report!(
-            "[progress] iter={} corpus={} new_cov={} crashes={} infra={} actions={} ok_actions={} fallbacks={} slow_actions={}{}",
+            "[progress] iter={} corpus={} new_cov={} new_hazard={} crashes={} infra={} actions={} ok_actions={} fallbacks={} slow_actions={} stale_reuse={}{}{}",
             metrics.iterations,
             metrics.corpus_size,
             metrics.new_coverage_events,
+            metrics.new_hazard_events,
             metrics.crashes,
             metrics.infra_errors,
             metrics.last_actions,
             metrics.last_action_successes,
             metrics.last_selector_fallbacks,
             metrics.last_slow_actions,
+            metrics.last_stale_reuse_candidates,
+            hazard_suffix(metrics),
             policy_suffix(metrics),
         );
         Self::timing(metrics);
@@ -95,15 +104,25 @@ impl Reporter {
 
     pub fn summary(metrics: &RunMetrics) {
         report!(
-            "[summary] iter={} corpus={} new_cov={} crashes={} infra={}{}",
+            "[summary] iter={} corpus={} new_cov={} new_hazard={} crashes={} infra={}{}{}",
             metrics.iterations,
             metrics.corpus_size,
             metrics.new_coverage_events,
+            metrics.new_hazard_events,
             metrics.crashes,
             metrics.infra_errors,
+            hazard_suffix(metrics),
             policy_suffix(metrics),
         );
     }
+}
+
+fn hazard_suffix(metrics: &RunMetrics) -> String {
+    metrics
+        .last_hazard_boundary
+        .as_ref()
+        .map(|boundary| format!(" last_hazard={boundary}"))
+        .unwrap_or_default()
 }
 
 fn local_timestamp() -> String {

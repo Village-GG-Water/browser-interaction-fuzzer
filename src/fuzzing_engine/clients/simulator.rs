@@ -73,6 +73,46 @@ pub struct SimulatorResponse {
     pub slow_actions: u64,
     #[serde(default)]
     pub timings: IterationTimings,
+    #[serde(default)]
+    pub action_trace: Vec<ActionTraceEntry>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ActionTraceEntry {
+    pub index: usize,
+    pub kind: Option<String>,
+    #[serde(default)]
+    pub target: Option<ActionTargetTrace>,
+    #[serde(default)]
+    pub ok: bool,
+    #[serde(default)]
+    pub fallback_used: bool,
+    #[serde(default)]
+    pub elapsed_ms: u64,
+    #[serde(default)]
+    pub exists_before: Option<bool>,
+    #[serde(default)]
+    pub exists_after: Option<bool>,
+    #[serde(default)]
+    pub url_before: String,
+    #[serde(default)]
+    pub url_after: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "space", rename_all = "snake_case")]
+pub enum ActionTargetTrace {
+    Dom {
+        selector: String,
+        #[serde(default)]
+        resolution: Option<String>,
+        #[serde(default)]
+        fallback: Option<bool>,
+    },
+    BrowserUi {
+        role: String,
+        name: String,
+    },
 }
 
 pub struct SimulatorClient {

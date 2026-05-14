@@ -4,6 +4,7 @@ use libafl::inputs::Input;
 use serde::{Deserialize, Serialize};
 
 use super::actions::Action;
+use super::mutation::InteractableMetadata;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -63,6 +64,8 @@ pub struct FuzzInput {
     pub document: DocumentSpec,
     pub actions: Vec<Action>,
     pub snapshot_path: Option<PathBuf>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub interactables: Vec<InteractableMetadata>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub document_stats: Option<DocumentStats>,
     #[serde(default, skip_serializing_if = "Option::is_none")]

@@ -87,7 +87,9 @@ DOM action:
   "edge_id": "dom.click.event",
   "target": {
     "space": "dom",
-    "selector": "#x1"
+    "selector": "#x1",
+    "resolution": "live_selector",
+    "fallback": true
   }
 }
 ```
@@ -109,11 +111,13 @@ Browser UI action:
 
 `edge_id`는 optional field입니다. Rust mutation policy가 FSA 기반 interaction sequence를 만들 때 어떤 transition이 선택되었는지 기록하기 위한 trace이며, simulator는 이 값을 실행 조건으로 사용하지 않습니다. 기존 seed처럼 `edge_id`가 없는 action JSON도 유효합니다.
 
+DOM target의 `resolution`과 `fallback`도 optional입니다. 값이 없으면 기존 동작처럼 실행 시점에 selector를 다시 찾고 selector miss 시 fallback 후보를 고릅니다. stale-reuse mutation은 `resolution = "cached_point"`와 `fallback = false`를 사용해 이전 bounding box 중심을 다시 조작하고, target miss를 임의 fallback으로 숨기지 않습니다.
+
 ### FSA 기반 interaction 생성
 
 Rust engine은 user-interaction sequence를 finite state automaton 기반으로 생성하고 변이합니다. FSA는 실행 결과를 관측하는 runtime checker가 아니라 generation/mutation-time guide입니다. simulator는 계속 action sequence를 순서대로 실행만 합니다.
 
-공통 state는 `PageReady`, `ElementPrimed`, `PointerOver`, `FocusedElement`, `TextFocused`, `AfterEvent`입니다. state는 DOM 전체 상태가 아니라 다음 interaction이 의미 있으려면 필요한 최소 전제를 나타냅니다. 예를 들어 `TextFocused`에서만 `type_text`와 `clear`를 만들고, `FocusedElement` 또는 `TextFocused`에서만 `press_key`를 만듭니다.
+공통 state는 `PageReady`, `ElementPrimed`, `PointerOver`, `FocusedElement`, `TextFocused`, `AfterEvent`, `AfterInvalidation`, `AsyncPending`입니다. state는 DOM 전체 상태가 아니라 다음 interaction이 의미 있으려면 필요한 최소 전제를 나타냅니다. 예를 들어 `TextFocused`에서만 `type_text`와 `clear`를 만들고, `FocusedElement` 또는 `TextFocused`에서만 `press_key`를 만듭니다.
 
 공통 state machine은 모든 DOM에 공유되고, `dom-generator`가 반환한 interactable metadata로 edge를 materialize합니다.
 
@@ -121,8 +125,11 @@ Rust engine은 user-interaction sequence를 finite state automaton 기반으로 
 - `is_focusable`: `focus -> FocusedElement`
 - `events`와 `has_handler`: click/hover/focus/input 계열 edge 가중치 증가
 - `is_draggable`와 `is_drop_target`: drag/drop pair edge
+- `invalidates_self`, `invalidates_dom`, `has_async_boundary`: stale-reuse suffix와 lifecycle hazard boundary feedback
 
 `AfterEvent`는 실제 handler 실행을 보장하는 상태가 아닙니다. metadata상 event handler가 있거나 event-triggering action을 방금 생성했으므로, 짧은 `sleep`, follow-up click/focus, scroll 같은 후속 action을 붙일 수 있다는 generation state입니다.
+
+Lifecycle hazard mutation은 `insert_self_invalidate_handler`, `insert_cross_invalidate_handler`, `wrap_invalidation_async`, `insert_focus_invalidate_handler` 같은 dom-generator op와 `dom.stale_reuse.*` action suffix를 조합합니다. coarse boundary는 `invalidated_to_async`, `async_to_stale_reuse`, `restored_to_stale_reuse`만 corpus/reward 후보로 사용하고, selector별 detail은 metrics와 crash artifact에만 둡니다.
 
 현재 단일 `snapshot.html` 실행 모델에서는 `back`과 `forward`를 공통 DOM FSA에서 생성하지 않습니다. multi-page testcase가 구현되면 navigation 상태는 별도 FSA로 확장합니다.
 
@@ -156,7 +163,8 @@ JSON-lines stdin/stdout을 사용합니다. stdout은 JSON response 전용이어
   "id": null,
   "html": "<!DOCTYPE html>...",
   "interactables": [],
-  "action_hints": []
+  "action_hints": [],
+  "stats": {}
 }
 ```
 
@@ -203,6 +211,20 @@ UI-only testcase는 `html_path = null`이고 `initial_url`을 사용합니다.
   "actions_succeeded": 4,
   "selector_fallbacks": 1,
   "slow_actions": 0,
+  "action_trace": [
+    {
+      "index": 0,
+      "kind": "click",
+      "target": {"space": "dom", "selector": "#x1"},
+      "ok": true,
+      "fallback_used": false,
+      "elapsed_ms": 12,
+      "exists_before": true,
+      "exists_after": false,
+      "url_before": "file:///...",
+      "url_after": "file:///..."
+    }
+  ],
   "timings": {
     "launch_ms": 100,
     "load_ms": 30,
@@ -225,6 +247,7 @@ UI-only testcase는 `html_path = null`이고 `initial_url`을 사용합니다.
 - `clients/dom_generator.rs`: dom-generator IPC.
 - `clients/simulator.rs`: simulator IPC.
 - `testcase_runner.rs`: testcase 실행, coverage/crash artifact 수집.
+- `lifecycle.rs`: simulator action trace와 generator metadata로 lifecycle hazard boundary를 계산합니다.
 - `libafl_executor.rs`: simulator harness를 LibAFL `Executor`로 감싸는 adapter.
 - `metrics.rs`: 수치 수집과 avg/p95 계산.
 - `reporting.rs`: 사람이 읽는 실행 상태 출력.
@@ -240,6 +263,7 @@ crashes/
       metadata.json
       actions.json
       simulator-response.json
+      hazard-summary.json
       snapshot.html
       document.fdir
       asan.txt
@@ -248,6 +272,7 @@ crashes/
 - `metadata.json`: `session_id`, `iteration`, `seed_id`, simulator `status`, crash type, ASAN source/hash를 저장합니다.
 - `actions.json`: crash 당시 실행한 action sequence입니다.
 - `simulator-response.json`: simulator가 반환한 원본 실행 결과입니다.
+- `hazard-summary.json`: coarse lifecycle boundary와 stale-reuse 후보 수를 저장합니다.
 - `snapshot.html`, `document.fdir`: DOM seed일 때만 저장됩니다.
 - `asan.txt`: ASAN report가 있을 때만 저장됩니다.
 

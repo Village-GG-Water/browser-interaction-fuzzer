@@ -148,6 +148,7 @@ def run_testcase(pw, config: dict[str, Any], message: dict[str, Any]) -> dict[st
         "selector_fallbacks": 0,
         "slow_actions": 0,
     }
+    action_trace: list[dict[str, Any]] = []
 
     browser = None
     context = None
@@ -192,15 +193,32 @@ def run_testcase(pw, config: dict[str, Any], message: dict[str, Any]) -> dict[st
         phase = now_ms()
         action_timeout = min(config_timeout(config), int(config.get("action_timeout_ms") or 3000))
         inter_delay = int(config.get("inter_action_delay_ms") or 0)
-        for action in message.get("actions", []):
+        target_cache: dict[str, dict[str, float]] = {}
+        for index, action in enumerate(message.get("actions", [])):
             action_started = now_ms()
-            ok, fallbacks = execute_action(page, action, action_timeout)
+            before = inspect_action_target(page, action.get("target"), target_cache)
+            url_before = safe_url(page)
+            ok, fallbacks = execute_action(page, action, action_timeout, target_cache)
             action_ms = elapsed_ms(action_started)
+            after = inspect_action_target(page, action.get("target"), target_cache)
+            url_after = safe_url(page)
             if ok:
                 action_stats["actions_succeeded"] += 1
             if action_ms >= action_timeout:
                 action_stats["slow_actions"] += 1
             action_stats["selector_fallbacks"] += fallbacks
+            action_trace.append({
+                "index": index,
+                "kind": action.get("kind"),
+                "target": action.get("target"),
+                "ok": ok,
+                "fallback_used": fallbacks > 0,
+                "elapsed_ms": action_ms,
+                "exists_before": before.get("exists"),
+                "exists_after": after.get("exists"),
+                "url_before": url_before,
+                "url_after": url_after,
+            })
             if inter_delay > 0:
                 time.sleep(inter_delay / 1000)
 
@@ -214,7 +232,9 @@ def run_testcase(pw, config: dict[str, Any], message: dict[str, Any]) -> dict[st
         browser = None
         context = None
         timings["close_ms"] = elapsed_ms(phase)
-        return finish("ok")
+        response = finish("ok")
+        response["action_trace"] = action_trace
+        return response
 
     except Exception as exc:
         phase = now_ms()
@@ -222,13 +242,24 @@ def run_testcase(pw, config: dict[str, Any], message: dict[str, Any]) -> dict[st
         timings["close_ms"] += elapsed_ms(phase)
         text = str(exc)
         if isinstance(exc, PlaywrightTimeoutError) or "timeout" in text.lower():
-            return finish("timeout", text)
+            response = finish("timeout", text)
+            response["action_trace"] = action_trace
+            return response
         if is_crash_error(exc):
-            return finish("crash", text)
-        return finish("error", text)
+            response = finish("crash", text)
+            response["action_trace"] = action_trace
+            return response
+        response = finish("error", text)
+        response["action_trace"] = action_trace
+        return response
 
 
-def execute_action(page, action: dict[str, Any], timeout_ms: int) -> tuple[bool, int]:
+def execute_action(
+    page,
+    action: dict[str, Any],
+    timeout_ms: int,
+    target_cache: dict[str, dict[str, float]],
+) -> tuple[bool, int]:
     kind = action.get("kind")
     target = action.get("target")
 
@@ -238,18 +269,24 @@ def execute_action(page, action: dict[str, Any], timeout_ms: int) -> tuple[bool,
 
     try:
         if kind == "click":
+            if uses_cached_point(target):
+                return click_cached_point(page, target, target_cache)
             element, fallback = resolve_dom_target(page, target, INTERACTABLE_CSS)
             if element:
                 element.click(timeout=timeout_ms)
                 return True, fallback
             return False, fallback
         if kind == "double_click":
+            if uses_cached_point(target):
+                return click_cached_point(page, target, target_cache, click_count=2)
             element, fallback = resolve_dom_target(page, target, INTERACTABLE_CSS)
             if element:
                 element.dblclick(timeout=timeout_ms)
                 return True, fallback
             return False, fallback
         if kind == "right_click":
+            if uses_cached_point(target):
+                return click_cached_point(page, target, target_cache, button="right")
             element, fallback = resolve_dom_target(page, target, INTERACTABLE_CSS)
             if element:
                 element.click(button="right", timeout=timeout_ms)
@@ -284,6 +321,8 @@ def execute_action(page, action: dict[str, Any], timeout_ms: int) -> tuple[bool,
                 return True, fallback
             return False, fallback
         if kind == "focus":
+            if uses_cached_point(target):
+                return click_cached_point(page, target, target_cache)
             element, fallback = resolve_dom_target(page, target, INTERACTABLE_CSS)
             if element:
                 element.focus()
@@ -296,6 +335,8 @@ def execute_action(page, action: dict[str, Any], timeout_ms: int) -> tuple[bool,
                 return True, fallback
             return False, fallback
         if kind == "hover":
+            if uses_cached_point(target):
+                return hover_cached_point(page, target, target_cache)
             element, fallback = resolve_dom_target(page, target, INTERACTABLE_CSS)
             if element:
                 element.hover(timeout=timeout_ms)
@@ -324,8 +365,10 @@ def execute_action(page, action: dict[str, Any], timeout_ms: int) -> tuple[bool,
 
 def resolve_dom_target(page, target: dict[str, Any] | None, fallback_css: str):
     selector = ""
+    allow_fallback = True
     if target and target.get("space") == "dom":
         selector = str(target.get("selector") or "")
+        allow_fallback = bool(target.get("fallback", True))
 
     if selector:
         try:
@@ -334,6 +377,9 @@ def resolve_dom_target(page, target: dict[str, Any] | None, fallback_css: str):
                 return element, 0
         except Exception:
             pass
+
+    if not allow_fallback:
+        return None, 0
 
     try:
         handlers = page.query_selector_all(EVENT_HANDLER_CSS)
@@ -350,6 +396,67 @@ def resolve_dom_target(page, target: dict[str, Any] | None, fallback_css: str):
         pass
 
     return None, 1
+
+
+def inspect_action_target(page, target: dict[str, Any] | None, target_cache: dict[str, dict[str, float]]) -> dict[str, Any]:
+    selector = ""
+    if target and target.get("space") == "dom":
+        selector = str(target.get("selector") or "")
+    if not selector:
+        return {"exists": None}
+    try:
+        element = page.query_selector(selector)
+        if not element:
+            return {"exists": False}
+        box = element.bounding_box()
+        if box:
+            target_cache[selector] = {
+                "x": float(box["x"]) + float(box["width"]) / 2.0,
+                "y": float(box["y"]) + float(box["height"]) / 2.0,
+            }
+        return {"exists": True}
+    except Exception:
+        return {"exists": False}
+
+
+def uses_cached_point(target: dict[str, Any] | None) -> bool:
+    return bool(target and target.get("space") == "dom" and target.get("resolution") == "cached_point")
+
+
+def cached_point(target: dict[str, Any] | None, target_cache: dict[str, dict[str, float]]):
+    if not target or target.get("space") != "dom":
+        return None
+    selector = str(target.get("selector") or "")
+    return target_cache.get(selector)
+
+
+def click_cached_point(
+    page,
+    target: dict[str, Any] | None,
+    target_cache: dict[str, dict[str, float]],
+    button: str = "left",
+    click_count: int = 1,
+) -> tuple[bool, int]:
+    point = cached_point(target, target_cache)
+    if not point:
+        return False, 0
+    page.mouse.click(point["x"], point["y"], button=button, click_count=click_count)
+    return True, 0
+
+
+def hover_cached_point(page, target: dict[str, Any] | None, target_cache: dict[str, dict[str, float]]) -> tuple[bool, int]:
+    point = cached_point(target, target_cache)
+    if not point:
+        return False, 0
+    page.mouse.move(point["x"], point["y"])
+    return True, 0
+
+
+def safe_url(page) -> str:
+    try:
+        return str(page.url)
+    except Exception:
+        return ""
 
 
 def launch_context(pw, config: dict[str, Any], profile_dir: Path):

@@ -6,6 +6,7 @@ pub mod coverage;
 pub mod crash;
 pub mod input;
 pub mod libafl_executor;
+pub mod lifecycle;
 pub mod metrics;
 pub mod mutation;
 pub mod reporting;

@@ -319,6 +319,7 @@ def _discover_corpus() -> list[str]:
 
 def _extract_interactables(doc) -> list[dict]:
     handler_events = {}
+    lifecycle = _lifecycle_hints(doc)
     for handler in getattr(doc, "event_handlers", []):
         handler_events.setdefault(handler.target_element_id, set()).add(handler.event)
 
@@ -352,6 +353,7 @@ def _extract_interactables(doc) -> list[dict]:
         if not is_interactable:
             continue
 
+        hint = lifecycle.get(elem.id, {})
         items.append({
             "selector": f"#{elem.id}",
             "tag": elem.tag,
@@ -361,8 +363,92 @@ def _extract_interactables(doc) -> list[dict]:
             "is_drop_target": is_drop_target,
             "is_focusable": is_focusable,
             "has_handler": has_handler,
+            "invalidates_self": bool(hint.get("invalidates_self")),
+            "invalidates_dom": bool(hint.get("invalidates_dom")),
+            "has_async_boundary": bool(hint.get("has_async_boundary")),
         })
     return items
+
+
+def _lifecycle_hints(doc) -> dict[str, dict[str, bool]]:
+    hints: dict[str, dict[str, bool]] = {}
+
+    def ensure(element_id: str) -> dict[str, bool]:
+        return hints.setdefault(
+            element_id,
+            {
+                "invalidates_self": False,
+                "invalidates_dom": False,
+                "has_async_boundary": False,
+            },
+        )
+
+    for handler in getattr(doc, "event_handlers", []):
+        info = _statement_lifecycle(handler.statements)
+        target_hint = ensure(handler.target_element_id)
+        target_hint["invalidates_self"] |= info["invalidates_self"]
+        target_hint["invalidates_dom"] |= info["invalidates_dom"] or info["invalidates_self"]
+        target_hint["has_async_boundary"] |= info["has_async_boundary"]
+        for victim_id in info["victim_ids"]:
+            victim_hint = ensure(victim_id)
+            victim_hint["invalidates_dom"] = True
+            victim_hint["has_async_boundary"] |= info["has_async_boundary"]
+
+    return hints
+
+
+def _statement_lifecycle(statements) -> dict:
+    result = {
+        "invalidates_self": False,
+        "invalidates_dom": False,
+        "has_async_boundary": False,
+        "victim_ids": set(),
+    }
+
+    def visit(stmt) -> None:
+        tag = getattr(stmt, "tag", None)
+        code = str(getattr(stmt, "code", ""))
+        lowered = code.lower()
+        if tag == "self_destruct" or "this.remove(" in lowered or "this.outerhtml" in lowered:
+            result["invalidates_self"] = True
+        if (
+            tag in {"dom_mutation", "self_destruct"}
+            or ".remove(" in lowered
+            or ".outerhtml" in lowered
+            or ".replacechildren(" in lowered
+            or ".innerhtml" in lowered
+        ):
+            result["invalidates_dom"] = True
+        if (
+            tag == "timer"
+            or "settimeout" in lowered
+            or "requestanimationframe" in lowered
+            or "queuemicrotask" in lowered
+        ):
+            result["has_async_boundary"] = True
+        for marker in ('getElementById("', "getElementById('"):
+            start = 0
+            while True:
+                idx = code.find(marker, start)
+                if idx == -1:
+                    break
+                value_start = idx + len(marker)
+                quote = marker[-1]
+                value_end = code.find(quote, value_start)
+                if value_end == -1:
+                    break
+                result["victim_ids"].add(code[value_start:value_end])
+                start = value_end + 1
+
+        for branch_name in ("then_branch", "else_branch"):
+            branch = getattr(stmt, branch_name, None)
+            if branch:
+                for child in branch:
+                    visit(child)
+
+    for statement in statements:
+        visit(statement)
+    return result
 
 
 def _infer_action_hints(doc, interactables: list[dict]) -> list[dict]:
@@ -405,7 +491,7 @@ def _document_has_timer(doc) -> bool:
         for stmt in statements:
             tag = getattr(stmt, "tag", None)
             code = getattr(stmt, "code", "")
-            if tag == "timer" or "setTimeout" in code or "requestAnimationFrame" in code:
+            if tag == "timer" or "setTimeout" in code or "requestAnimationFrame" in code or "queueMicrotask" in code:
                 return True
             for branch_name in ("then_branch", "else_branch"):
                 branch = getattr(stmt, branch_name, None)

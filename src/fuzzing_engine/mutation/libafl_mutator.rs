@@ -143,6 +143,7 @@ where
                 input.seed_dir = work_dir;
                 input.document = DocumentSpec::Fdir { path: output_fdir };
                 input.snapshot_path = Some(snapshot_path);
+                input.interactables = doc.interactables;
                 input.document_stats = Some(doc.stats);
             }
             DocumentSpec::NoDocument { .. } => {

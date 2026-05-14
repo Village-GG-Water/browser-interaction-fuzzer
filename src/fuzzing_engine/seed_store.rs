@@ -81,6 +81,7 @@ impl SeedStore {
                 document: absolute_document(seed_dir, &spec.document),
                 actions,
                 snapshot_path,
+                interactables: Vec::new(),
                 document_stats: None,
                 mutation_phase: None,
             },

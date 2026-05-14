@@ -11,6 +11,8 @@ pub enum InteractionState {
     FocusedElement,
     TextFocused,
     AfterEvent,
+    AfterInvalidation,
+    AsyncPending,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -202,6 +204,26 @@ fn materialize_edges<R: Rng + ?Sized>(
             push_click_edges(rng, &mut edges, interactables, None, 5);
             push_focus_edges(rng, &mut edges, interactables, None, 3);
         }
+        InteractionState::AfterInvalidation => {
+            push_sleep_with_target(
+                &mut edges,
+                "time.sleep.after_invalidation",
+                InteractionState::AsyncPending,
+                cursor.target.clone(),
+                14,
+            );
+            push_stale_reuse_edges(&mut edges, cursor.target.clone(), 2);
+        }
+        InteractionState::AsyncPending => {
+            push_stale_reuse_edges(&mut edges, cursor.target.clone(), 18);
+            push_sleep_with_target(
+                &mut edges,
+                "time.sleep.after_invalidation",
+                InteractionState::AsyncPending,
+                cursor.target.clone(),
+                2,
+            );
+        }
     }
     if edges.is_empty() {
         push_scroll(
@@ -259,6 +281,66 @@ fn push_sleep(
         action,
         next: InteractionCursor::at(next, None),
         weight,
+    });
+}
+
+fn push_sleep_with_target(
+    edges: &mut Vec<WeightedEdge>,
+    edge_id: &'static str,
+    next: InteractionState,
+    target: Option<ActionTarget>,
+    weight: u32,
+) {
+    let mut action = Action::sleep(16);
+    action.edge_id = Some(edge_id.to_string());
+    edges.push(WeightedEdge {
+        action,
+        next: InteractionCursor::at(next, target),
+        weight,
+    });
+}
+
+fn push_stale_reuse_edges(
+    edges: &mut Vec<WeightedEdge>,
+    target: Option<ActionTarget>,
+    weight: u32,
+) {
+    let Some(selector) = target.as_ref().and_then(ActionTarget::selector) else {
+        return;
+    };
+    let stale_target = ActionTarget::dom_cached_point_no_fallback(selector.to_string());
+    let click = Action {
+        kind: ActionKind::Click,
+        edge_id: Some("dom.stale_reuse.click".to_string()),
+        target: Some(stale_target.clone()),
+        to: None,
+        text: None,
+        key: None,
+        x: None,
+        y: None,
+        millis: None,
+    };
+    edges.push(WeightedEdge {
+        action: click,
+        next: InteractionCursor::page_ready(),
+        weight,
+    });
+
+    let focus = Action {
+        kind: ActionKind::Focus,
+        edge_id: Some("dom.stale_reuse.focus".to_string()),
+        target: Some(stale_target),
+        to: None,
+        text: None,
+        key: None,
+        x: None,
+        y: None,
+        millis: None,
+    };
+    edges.push(WeightedEdge {
+        action: focus,
+        next: InteractionCursor::page_ready(),
+        weight: weight / 2 + 1,
     });
 }
 
@@ -526,6 +608,9 @@ fn push_blur(edges: &mut Vec<WeightedEdge>, target: Option<ActionTarget>, weight
 }
 
 fn next_after_click(item: &InteractableMetadata, target: ActionTarget) -> InteractionCursor {
+    if item.is_lifecycle_hazard() {
+        return InteractionCursor::at(InteractionState::AfterInvalidation, Some(target));
+    }
     if event_matches(
         item,
         &[
@@ -554,6 +639,9 @@ fn next_after_event_action(
     fallback: InteractionState,
     target: Option<ActionTarget>,
 ) -> InteractionCursor {
+    if item.is_lifecycle_hazard() {
+        return InteractionCursor::at(InteractionState::AfterInvalidation, target);
+    }
     if item.has_handler {
         InteractionCursor::at(InteractionState::AfterEvent, target)
     } else {
@@ -571,7 +659,17 @@ fn replay_action(
         .as_ref()
         .and_then(|target| item_for_target(target, interactables));
     match action.kind {
-        ActionKind::Scroll | ActionKind::Sleep => Some(InteractionCursor::page_ready()),
+        ActionKind::Sleep => {
+            if cursor.state == InteractionState::AfterInvalidation {
+                Some(InteractionCursor::at(
+                    InteractionState::AsyncPending,
+                    cursor.target.clone(),
+                ))
+            } else {
+                Some(InteractionCursor::page_ready())
+            }
+        }
+        ActionKind::Scroll => Some(InteractionCursor::page_ready()),
         ActionKind::ScrollIntoView => action
             .target
             .clone()
@@ -592,6 +690,14 @@ fn replay_action(
             })
         }
         ActionKind::Click | ActionKind::DoubleClick | ActionKind::RightClick => {
+            if action
+                .target
+                .as_ref()
+                .is_some_and(ActionTarget::uses_cached_point)
+                && cursor.state == InteractionState::AsyncPending
+            {
+                return Some(InteractionCursor::page_ready());
+            }
             action.target.clone().map(|target| {
                 item.map_or_else(
                     || InteractionCursor::at(InteractionState::AfterEvent, Some(target.clone())),
@@ -599,17 +705,33 @@ fn replay_action(
                 )
             })
         }
-        ActionKind::Focus => action.target.clone().map(|target| {
-            if let Some(item) = item {
-                if item.is_text_input {
-                    return InteractionCursor::at(InteractionState::TextFocused, Some(target));
-                }
-                if event_matches(item, &["focus"]) || item.has_handler {
-                    return InteractionCursor::at(InteractionState::AfterEvent, Some(target));
-                }
+        ActionKind::Focus => {
+            if action
+                .target
+                .as_ref()
+                .is_some_and(ActionTarget::uses_cached_point)
+                && cursor.state == InteractionState::AsyncPending
+            {
+                return Some(InteractionCursor::page_ready());
             }
-            InteractionCursor::at(InteractionState::FocusedElement, Some(target))
-        }),
+            action.target.clone().map(|target| {
+                if let Some(item) = item {
+                    if item.is_lifecycle_hazard() {
+                        return InteractionCursor::at(
+                            InteractionState::AfterInvalidation,
+                            Some(target),
+                        );
+                    }
+                    if item.is_text_input {
+                        return InteractionCursor::at(InteractionState::TextFocused, Some(target));
+                    }
+                    if event_matches(item, &["focus"]) || item.has_handler {
+                        return InteractionCursor::at(InteractionState::AfterEvent, Some(target));
+                    }
+                }
+                InteractionCursor::at(InteractionState::FocusedElement, Some(target))
+            })
+        }
         ActionKind::TypeText | ActionKind::Clear => {
             if cursor.state != InteractionState::TextFocused {
                 return None;
@@ -698,7 +820,7 @@ fn item_for_target<'a>(
     target: &ActionTarget,
     interactables: &'a [InteractableMetadata],
 ) -> Option<&'a InteractableMetadata> {
-    let ActionTarget::Dom { selector } = target else {
+    let ActionTarget::Dom { selector, .. } = target else {
         return None;
     };
     interactables.iter().find(|item| item.selector == *selector)
@@ -727,6 +849,7 @@ mod tests {
             is_drop_target: false,
             is_focusable: true,
             has_handler: true,
+            ..InteractableMetadata::default()
         }
     }
 
@@ -740,6 +863,14 @@ mod tests {
             is_drop_target: false,
             is_focusable: true,
             has_handler: true,
+            ..InteractableMetadata::default()
+        }
+    }
+
+    fn self_invalidating_button() -> InteractableMetadata {
+        InteractableMetadata {
+            invalidates_self: true,
+            ..button()
         }
     }
 
@@ -766,7 +897,7 @@ mod tests {
                             .iter()
                             .any(|prefix| prefix.edge_id.as_deref() == Some("dom.focus.text_input")
                                 || matches!(prefix.kind, ActionKind::Click)
-                                    && matches!(prefix.target, Some(ActionTarget::Dom { ref selector }) if selector == "#name"))
+                                    && matches!(prefix.target, Some(ActionTarget::Dom { ref selector, .. }) if selector == "#name"))
                     );
                 }
             }
@@ -814,5 +945,26 @@ mod tests {
             assert!(actions.len() <= 4);
             validate_actions(&actions).unwrap();
         }
+    }
+
+    #[test]
+    fn hazardous_click_can_generate_async_stale_reuse_suffix() {
+        let mut rng = StdRng::seed_from_u64(42);
+        let edges = materialize_edges(
+            &mut rng,
+            &InteractionCursor::at(
+                InteractionState::AsyncPending,
+                Some(ActionTarget::dom("#go")),
+            ),
+            &[self_invalidating_button()],
+        );
+
+        let stale = edges
+            .iter()
+            .find(|edge| edge.action.edge_id.as_deref() == Some("dom.stale_reuse.click"))
+            .and_then(|edge| edge.action.target.as_ref())
+            .unwrap();
+        assert!(stale.uses_cached_point());
+        assert!(stale.disables_fallback());
     }
 }

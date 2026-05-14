@@ -12,6 +12,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use libafl::corpus::{Corpus, InMemoryCorpus, Testcase};
 use libafl::events::NopEventManager;
 use libafl::executors::ExitKind;
+use libafl::feedback_or;
 use libafl::feedbacks::{CrashFeedback, MaxMapFeedback};
 use libafl::fuzzer::{Fuzzer, StdFuzzer};
 use libafl::observers::{HitcountsMapObserver, StdMapObserver};
@@ -29,6 +30,7 @@ use super::config::AppConfig;
 use super::coverage::{COVERAGE_MAP, COVERAGE_MAP_SIZE, CoverageTracker};
 use super::input::{DocumentSpec, FuzzInput};
 use super::libafl_executor::PlainExecutor;
+use super::lifecycle::{HAZARD_MAP, HAZARD_MAP_SIZE};
 use super::metrics::RunMetrics;
 use super::mutation::{
     DefaultMutationStrategy, LibAflMutationAdapter, MutationPhase, MutationPolicyState,
@@ -144,8 +146,18 @@ impl FuzzingApp {
                 COVERAGE_MAP_SIZE,
             ))
         };
+        let hazard_observer = unsafe {
+            HitcountsMapObserver::new(StdMapObserver::from_mut_ptr(
+                "lifecycle_hazard_map",
+                std::ptr::addr_of_mut!(HAZARD_MAP) as *mut u8,
+                HAZARD_MAP_SIZE,
+            ))
+        };
 
-        let mut feedback = MaxMapFeedback::new(&edges_observer);
+        let mut feedback = feedback_or!(
+            MaxMapFeedback::with_name("sancov_feedback", &edges_observer),
+            MaxMapFeedback::with_name("lifecycle_hazard_feedback", &hazard_observer)
+        );
         let mut objective = CrashFeedback::new();
         let rng = StdRand::with_seed(current_nanos());
         let mut state = StdState::new(
@@ -166,7 +178,8 @@ impl FuzzingApp {
         let scheduler = QueueScheduler::new();
         let mut fuzzer = StdFuzzer::new(scheduler, feedback, objective);
         let mut manager = NopEventManager::new();
-        let mut executor = PlainExecutor::new(harness, tuple_list!(edges_observer));
+        let mut executor =
+            PlainExecutor::new(harness, tuple_list!(edges_observer, hazard_observer));
         let mut stages = tuple_list!(StdMutationalStage::with_max_iterations(
             LibAflMutationAdapter::new(
                 &generator_config,
@@ -259,6 +272,7 @@ impl FuzzingApp {
             document: spec.document.clone(),
             actions,
             snapshot_path: Some(snapshot_path),
+            interactables: doc.interactables,
             document_stats: Some(doc.stats),
             mutation_phase: None,
         };
@@ -315,13 +329,31 @@ fn record_outcome(
         metrics.new_coverage_events += 1;
         Reporter::new_coverage(iteration, outcome.new_coverage_edges);
     }
+    if outcome.hazard_summary.has_new_boundary() {
+        metrics.new_hazard_events += outcome.hazard_summary.new_boundaries.len() as u64;
+        for boundary in &outcome.hazard_summary.new_boundaries {
+            Reporter::new_hazard(
+                iteration,
+                boundary.as_str(),
+                outcome.hazard_summary.stale_reuse_candidates,
+            );
+        }
+    }
+    metrics.last_stale_reuse_candidates = outcome.hazard_summary.stale_reuse_candidates;
+    metrics.last_hazard_boundary = outcome
+        .hazard_summary
+        .last_boundary
+        .map(|boundary| boundary.as_str().to_string());
     let phase = input
         .mutation_phase
         .as_deref()
         .and_then(MutationPhase::from_str);
     {
         let mut policy = policy.borrow_mut();
-        policy.record_result(phase, outcome.new_coverage_edges > 0);
+        policy.record_result(
+            phase,
+            outcome.new_coverage_edges > 0 || outcome.hazard_summary.has_new_boundary(),
+        );
         metrics.policy_snapshot = Some(policy.snapshot());
     }
 
@@ -334,6 +366,7 @@ fn record_outcome(
             input,
             &input.actions,
             response,
+            &outcome.hazard_summary,
             outcome.classified_crash.as_ref(),
         )?;
         let crash_name = outcome

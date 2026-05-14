@@ -25,6 +25,10 @@ pub enum DomMutationOp {
     RemoveStatement,
     InsertStatement,
     MutateApiArgs,
+    InsertSelfInvalidateHandler,
+    InsertCrossInvalidateHandler,
+    WrapInvalidationAsync,
+    InsertFocusInvalidateHandler,
 }
 
 impl DomMutationOp {
@@ -47,6 +51,10 @@ impl DomMutationOp {
             Self::RemoveStatement => "remove_statement",
             Self::InsertStatement => "insert_statement",
             Self::MutateApiArgs => "mutate_api_args",
+            Self::InsertSelfInvalidateHandler => "insert_self_invalidate_handler",
+            Self::InsertCrossInvalidateHandler => "insert_cross_invalidate_handler",
+            Self::WrapInvalidationAsync => "wrap_invalidation_async",
+            Self::InsertFocusInvalidateHandler => "insert_focus_invalidate_handler",
         }
     }
 
@@ -76,6 +84,12 @@ impl DomMutationOp {
             Self::MutateApiArgs,
             Self::MutateApiArgs,
             Self::MutateApiArgs,
+            Self::InsertSelfInvalidateHandler,
+            Self::InsertSelfInvalidateHandler,
+            Self::InsertCrossInvalidateHandler,
+            Self::InsertCrossInvalidateHandler,
+            Self::WrapInvalidationAsync,
+            Self::InsertFocusInvalidateHandler,
         ] {
             if op.allowed_by_budget(stats, budget) {
                 weighted.push(op);
@@ -107,6 +121,16 @@ impl DomMutationOp {
             }
             _ => true,
         }
+    }
+
+    pub fn is_lifecycle_setup(self) -> bool {
+        matches!(
+            self,
+            Self::InsertSelfInvalidateHandler
+                | Self::InsertCrossInvalidateHandler
+                | Self::WrapInvalidationAsync
+                | Self::InsertFocusInvalidateHandler
+        )
     }
 }
 

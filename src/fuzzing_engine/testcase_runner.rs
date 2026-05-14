@@ -13,11 +13,15 @@ use super::coverage::{
 };
 use super::crash::{ClassifiedCrash, CrashType, find_and_classify_asan_report};
 use super::input::FuzzInput;
+use super::lifecycle::{
+    HazardSummary, LifecycleTracker, record_hazard_boundaries, reset_hazard_map,
+};
 
 #[derive(Debug)]
 pub struct ExecutionOutcome {
     pub response: SimulatorResponse,
     pub new_coverage_edges: usize,
+    pub hazard_summary: HazardSummary,
     pub classified_crash: Option<ClassifiedCrash>,
     pub timed_out: bool,
 }
@@ -44,6 +48,7 @@ pub struct TestcaseRunner {
     simulator: SimulatorClient,
     sancov_dir: PathBuf,
     asan_dir: PathBuf,
+    lifecycle: LifecycleTracker,
 }
 
 impl TestcaseRunner {
@@ -52,6 +57,7 @@ impl TestcaseRunner {
             simulator,
             sancov_dir,
             asan_dir,
+            lifecycle: LifecycleTracker::default(),
         }
     }
 
@@ -62,6 +68,7 @@ impl TestcaseRunner {
         coverage: &mut CoverageTracker,
     ) -> EngineResult<ExecutionOutcome> {
         reset_coverage_map();
+        reset_hazard_map();
         let iteration_started = Instant::now();
         let started_at = SystemTime::now();
         let response = self.simulator.run_testcase(RunTestcaseRequest {
@@ -87,11 +94,16 @@ impl TestcaseRunner {
         response.timings.asan_scan_ms = asan_scan_ms;
         response.timings.sancov_parse_ms = sancov_parse_ms;
         response.timings.iteration_total_ms = elapsed_ms(iteration_started);
+        let hazard_summary =
+            self.lifecycle
+                .evaluate(&input.actions, &response, &input.interactables);
+        record_hazard_boundaries(&hazard_summary);
 
         Ok(ExecutionOutcome {
             timed_out: response.status == "timeout",
             response,
             new_coverage_edges,
+            hazard_summary,
             classified_crash,
         })
     }
@@ -104,6 +116,7 @@ pub fn save_crash_artifacts(
     input: &FuzzInput,
     actions: &[Action],
     response: &SimulatorResponse,
+    hazard_summary: &HazardSummary,
     classified_crash: Option<&ClassifiedCrash>,
 ) -> EngineResult<PathBuf> {
     let case_dir = crash_session_dir.join(format!("crash_{iteration:06}"));
@@ -134,6 +147,10 @@ pub fn save_crash_artifacts(
         case_dir.join("simulator-response.json"),
         serde_json::to_string_pretty(response)?,
     )?;
+    fs::write(
+        case_dir.join("hazard-summary.json"),
+        serde_json::to_string_pretty(hazard_summary)?,
+    )?;
 
     let metadata = if let Some(crash) = classified_crash {
         fs::write(case_dir.join("asan.txt"), &crash.report.excerpt)?;
@@ -145,6 +162,7 @@ pub fn save_crash_artifacts(
             "crash_type": crash.crash_type.as_str(),
             "stack_hash": format!("{:016x}", crash.stack_hash),
             "asan_source": crash.report.source,
+            "hazard_summary": hazard_summary,
         })
     } else {
         serde_json::json!({
@@ -153,6 +171,7 @@ pub fn save_crash_artifacts(
             "seed_id": input.seed_id,
             "status": response.status,
             "crash_type": null,
+            "hazard_summary": hazard_summary,
         })
     };
     fs::write(

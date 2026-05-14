@@ -40,10 +40,13 @@ impl MutationScheduler {
             };
         }
 
+        let dom_ops = self.random_dom_ops(rng, stats, budget);
+        let has_lifecycle_setup = dom_ops.iter().any(|op| op.is_lifecycle_setup());
+
         MutationPlan {
             phase: Some(MutationPhase::Dom),
-            dom_ops: self.random_dom_ops(rng, stats, budget),
-            mutate_actions: false,
+            dom_ops,
+            mutate_actions: has_lifecycle_setup,
             refresh_document: false,
         }
     }
@@ -54,9 +57,16 @@ impl MutationScheduler {
         stats: Option<DocumentStats>,
         budget: DomMutationBudget,
     ) -> Vec<DomMutationOp> {
+        let first = DomMutationOp::random_with_budget(rng, stats, budget);
+        if first.is_lifecycle_setup() {
+            return vec![first];
+        }
+
         let count = rng.gen_range(1..=self.max_dom_ops_per_iteration);
-        (0..count)
-            .map(|_| DomMutationOp::random_with_budget(rng, stats, budget))
+        std::iter::once(first)
+            .chain((1..count).map(|_| DomMutationOp::random_with_budget(rng, stats, budget)))
+            .filter(|op| !op.is_lifecycle_setup())
+            .take(self.max_dom_ops_per_iteration)
             .collect()
     }
 }
@@ -69,7 +79,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn dom_phase_plan_mutates_only_dom() {
+    fn dom_phase_plan_mutates_actions_only_for_lifecycle_setup() {
         let scheduler = MutationScheduler::new();
         let mut rng = StdRng::seed_from_u64(1);
 
@@ -83,7 +93,10 @@ mod tests {
 
         assert_eq!(plan.phase, Some(MutationPhase::Dom));
         assert!(!plan.dom_ops.is_empty());
-        assert!(!plan.mutate_actions);
+        assert_eq!(
+            plan.mutate_actions,
+            plan.dom_ops.iter().any(|op| op.is_lifecycle_setup())
+        );
     }
 
     #[test]

@@ -3,5 +3,6 @@ pub mod simulator;
 
 pub use dom_generator::{DomGeneratorClient, DomGeneratorConfig};
 pub use simulator::{
-    RunTestcaseRequest, SimulatorClient, SimulatorConfig, SimulatorResponse, optional_path_string,
+    ActionTargetTrace, ActionTraceEntry, RunTestcaseRequest, SimulatorClient, SimulatorConfig,
+    SimulatorResponse, optional_path_string,
 };

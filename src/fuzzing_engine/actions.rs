@@ -24,15 +24,68 @@ pub enum ActionKind {
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(tag = "space", rename_all = "snake_case")]
 pub enum ActionTarget {
-    Dom { selector: String },
-    BrowserUi { role: String, name: String },
+    Dom {
+        selector: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        resolution: Option<TargetResolution>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        fallback: Option<bool>,
+    },
+    BrowserUi {
+        role: String,
+        name: String,
+    },
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum TargetResolution {
+    LiveSelector,
+    CachedPoint,
 }
 
 impl ActionTarget {
     pub fn dom(selector: impl Into<String>) -> Self {
         Self::Dom {
             selector: selector.into(),
+            resolution: None,
+            fallback: None,
         }
+    }
+
+    pub fn dom_cached_point_no_fallback(selector: impl Into<String>) -> Self {
+        Self::Dom {
+            selector: selector.into(),
+            resolution: Some(TargetResolution::CachedPoint),
+            fallback: Some(false),
+        }
+    }
+
+    pub fn selector(&self) -> Option<&str> {
+        match self {
+            Self::Dom { selector, .. } => Some(selector.as_str()),
+            Self::BrowserUi { .. } => None,
+        }
+    }
+
+    pub fn disables_fallback(&self) -> bool {
+        matches!(
+            self,
+            Self::Dom {
+                fallback: Some(false),
+                ..
+            }
+        )
+    }
+
+    pub fn uses_cached_point(&self) -> bool {
+        matches!(
+            self,
+            Self::Dom {
+                resolution: Some(TargetResolution::CachedPoint),
+                ..
+            }
+        )
     }
 }
 
@@ -216,6 +269,19 @@ mod tests {
         assert_eq!(json["kind"], "click");
         assert_eq!(json["target"]["space"], "dom");
         assert_eq!(json["target"]["selector"], "#x1");
+        assert!(json["target"].get("resolution").is_none());
+        assert!(json["target"].get("fallback").is_none());
+    }
+
+    #[test]
+    fn serializes_cached_point_stale_reuse_target() {
+        let action = Action::click(ActionTarget::dom_cached_point_no_fallback("#x1"));
+        let json = serde_json::to_value(action).unwrap();
+
+        assert_eq!(json["target"]["space"], "dom");
+        assert_eq!(json["target"]["selector"], "#x1");
+        assert_eq!(json["target"]["resolution"], "cached_point");
+        assert_eq!(json["target"]["fallback"], false);
     }
 
     #[test]

@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use super::interaction_fsa;
 use crate::fuzzing_engine::actions::{Action, ActionKind, ActionTarget};
 
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct InteractableMetadata {
     pub selector: String,
     pub tag: String,
@@ -20,6 +20,18 @@ pub struct InteractableMetadata {
     pub is_focusable: bool,
     #[serde(default)]
     pub has_handler: bool,
+    #[serde(default)]
+    pub invalidates_self: bool,
+    #[serde(default)]
+    pub invalidates_dom: bool,
+    #[serde(default)]
+    pub has_async_boundary: bool,
+}
+
+impl InteractableMetadata {
+    pub fn is_lifecycle_hazard(&self) -> bool {
+        self.invalidates_self || self.invalidates_dom || self.has_async_boundary
+    }
 }
 
 const FALLBACK_SELECTORS: [&str; 12] = [
@@ -134,6 +146,40 @@ mod tests {
             assert!(actions.len() <= 3);
         }
     }
+
+    #[test]
+    fn stale_reuse_suffix_uses_cached_point_without_fallback() {
+        let mut rng = StdRng::seed_from_u64(11);
+        let mut actions = vec![Action::scroll(0, 1)];
+        let interactables = vec![InteractableMetadata {
+            selector: "#victim".to_string(),
+            tag: "button".to_string(),
+            events: vec!["click".to_string()],
+            is_focusable: true,
+            has_handler: true,
+            invalidates_self: true,
+            ..InteractableMetadata::default()
+        }];
+
+        assert!(insert_stale_reuse_suffix(
+            &mut rng,
+            &mut actions,
+            4,
+            &interactables
+        ));
+
+        assert_eq!(actions.len(), 4);
+        assert_eq!(
+            actions.last().and_then(|action| action.edge_id.as_deref()),
+            Some("dom.stale_reuse.click")
+        );
+        let target = actions
+            .last()
+            .and_then(|action| action.target.as_ref())
+            .unwrap();
+        assert!(target.uses_cached_point());
+        assert!(target.disables_fallback());
+    }
 }
 
 pub fn mutate_action_sequence<R: Rng + ?Sized>(
@@ -142,6 +188,12 @@ pub fn mutate_action_sequence<R: Rng + ?Sized>(
     max_actions: usize,
     interactables: &[InteractableMetadata],
 ) -> bool {
+    if rng.gen_range(0..100) < 40
+        && insert_stale_reuse_suffix(rng, actions, max_actions, interactables)
+    {
+        return true;
+    }
+
     if rng.gen_range(0..100) >= 15 {
         return interaction_fsa::mutate_action_sequence(rng, actions, max_actions, interactables);
     }
@@ -192,6 +244,84 @@ pub fn mutate_action_sequence<R: Rng + ?Sized>(
         }
         _ => false,
     }
+}
+
+pub fn insert_stale_reuse_suffix<R: Rng + ?Sized>(
+    rng: &mut R,
+    actions: &mut Vec<Action>,
+    max_actions: usize,
+    interactables: &[InteractableMetadata],
+) -> bool {
+    let hazards: Vec<&InteractableMetadata> = interactables
+        .iter()
+        .filter(|item| item.is_lifecycle_hazard() && !item.selector.is_empty())
+        .collect();
+    if hazards.is_empty() || max_actions < 3 {
+        return false;
+    }
+
+    let item = hazards[rng.gen_range(0..hazards.len())];
+    let live_target = ActionTarget::dom(item.selector.clone());
+    let stale_target = ActionTarget::dom_cached_point_no_fallback(item.selector.clone());
+    let sleep_ms = if rng.gen_bool(0.6) { 16 } else { 50 };
+
+    let mut suffix = Vec::new();
+    if max_actions >= 4 {
+        suffix.push(Action {
+            kind: ActionKind::ScrollIntoView,
+            edge_id: Some("dom.reveal.stale_reuse_target".to_string()),
+            target: Some(live_target.clone()),
+            to: None,
+            text: None,
+            key: None,
+            x: None,
+            y: None,
+            millis: None,
+        });
+    }
+    let trigger_kind = if item.is_focusable && rng.gen_bool(0.25) {
+        ActionKind::Focus
+    } else {
+        ActionKind::Click
+    };
+    suffix.push(Action {
+        kind: trigger_kind,
+        edge_id: Some("dom.trigger.invalidation".to_string()),
+        target: Some(live_target),
+        to: None,
+        text: None,
+        key: None,
+        x: None,
+        y: None,
+        millis: None,
+    });
+    suffix.push(Action {
+        kind: ActionKind::Sleep,
+        edge_id: Some("time.sleep.after_invalidation".to_string()),
+        target: None,
+        to: None,
+        text: None,
+        key: None,
+        x: None,
+        y: None,
+        millis: Some(sleep_ms),
+    });
+    suffix.push(Action {
+        kind: ActionKind::Click,
+        edge_id: Some("dom.stale_reuse.click".to_string()),
+        target: Some(stale_target),
+        to: None,
+        text: None,
+        key: None,
+        x: None,
+        y: None,
+        millis: None,
+    });
+
+    let keep = max_actions.saturating_sub(suffix.len());
+    actions.truncate(keep);
+    actions.extend(suffix);
+    true
 }
 
 fn random_action_from_metadata<R: Rng + ?Sized>(

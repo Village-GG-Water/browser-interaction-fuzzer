@@ -1,54 +1,60 @@
 use super::config::AppConfig;
 use super::metrics::RunMetrics;
 
+macro_rules! report {
+    ($($arg:tt)*) => {
+        println!("[{}] {}", local_timestamp(), format_args!($($arg)*))
+    };
+}
+
 pub struct Reporter;
 
 impl Reporter {
     pub fn print_config(config: &AppConfig) {
-        println!("[config] workspace={}", config.workspace_dir.display());
-        println!("[config] browser_kind={}", config.browser_kind);
-        println!("[config] browser_path={}", config.browser_path);
-        println!(
+        report!("[config] workspace={}", config.workspace_dir.display());
+        report!("[config] browser_kind={}", config.browser_kind);
+        report!("[config] browser_path={}", config.browser_path);
+        report!(
             "[config] dom_generator={}",
             config.dom_generator_dir.display()
         );
-        println!("[config] simulator={}", config.simulator_dir.display());
+        report!("[config] simulator={}", config.simulator_dir.display());
         match &config.initial_seed_dir {
-            Some(seed_dir) => println!("[config] initial_seed_dir={}", seed_dir.display()),
-            None => println!("[config] initial_seed_dir=<generated>"),
+            Some(seed_dir) => report!("[config] initial_seed_dir={}", seed_dir.display()),
+            None => report!("[config] initial_seed_dir=<generated>"),
         }
-        println!("[config] libafl_corpus=in-memory");
-        println!("[config] out={}", config.out_dir.display());
+        report!("[config] libafl_corpus=in-memory");
+        report!("[config] out={}", config.out_dir.display());
     }
 
     pub fn session_started(session_id: &str, crash_session_dir: &std::path::Path) {
-        println!(
+        report!(
             "[session] id={session_id} crashes={}",
             crash_session_dir.display()
         );
     }
 
     pub fn seed_loaded(seed_id: &str, source_kind: &str) {
-        println!("[seed] loaded {seed_id} source={source_kind}");
+        report!("[seed] loaded {seed_id} source={source_kind}");
     }
 
     pub fn generated_seed(seed_id: &str) {
-        println!("[seed] generated {seed_id}");
+        report!("[seed] generated {seed_id}");
     }
 
-    pub fn new_coverage(new_edges: usize) {
-        println!("[coverage] new edges={new_edges}");
+    pub fn new_coverage(iteration: u64, new_edges: usize) {
+        report!("[coverage] iteration={iteration} new_edges={new_edges}");
     }
 
     pub fn crash(iteration: u64, crash_type: &str, crash_dir: &std::path::Path) {
-        println!(
+        report!(
             "[crash] iteration={iteration} type={crash_type} saved={}",
             crash_dir.display()
         );
     }
 
     pub fn progress(metrics: &RunMetrics) {
-        println!(
+        report!(
             "[progress] iter={} corpus={} new_cov={} crashes={} infra={} actions={} ok_actions={} fallbacks={} slow_actions={}{}",
             metrics.iterations,
             metrics.corpus_size,
@@ -66,7 +72,7 @@ impl Reporter {
 
     pub fn timing(metrics: &RunMetrics) {
         let t = metrics.timing_summary();
-        println!(
+        report!(
             "[timing] avg/p95 ms total={}/{} simulator={}/{} launch={}/{} load={}/{} actions={}/{} close={}/{} asan={}/{} sancov={}/{}",
             t.total.avg,
             t.total.p95,
@@ -88,7 +94,7 @@ impl Reporter {
     }
 
     pub fn summary(metrics: &RunMetrics) {
-        println!(
+        report!(
             "[summary] iter={} corpus={} new_cov={} crashes={} infra={}{}",
             metrics.iterations,
             metrics.corpus_size,
@@ -98,6 +104,12 @@ impl Reporter {
             policy_suffix(metrics),
         );
     }
+}
+
+fn local_timestamp() -> String {
+    chrono::Local::now()
+        .format("%Y-%m-%d %H:%M:%S%.3f %:z")
+        .to_string()
 }
 
 fn policy_suffix(metrics: &RunMetrics) -> String {

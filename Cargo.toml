@@ -8,6 +8,7 @@ name = "browser-interaction-fuzzer"
 path = "src/main.rs"
 
 [dependencies]
+chrono = { version = "0.4", default-features = false, features = ["clock"] }
 ctrlc = "3.4"
 libafl = { version = "0.15.4", default-features = false, features = ["std", "derive", "serdeany_autoreg"] }
 libafl_bolts = { version = "0.15.4", default-features = false, features = ["std", "derive", "serdeany_autoreg"] }

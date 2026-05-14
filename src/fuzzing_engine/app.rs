@@ -313,7 +313,7 @@ fn record_outcome(
 
     if outcome.new_coverage_edges > 0 {
         metrics.new_coverage_events += 1;
-        Reporter::new_coverage(outcome.new_coverage_edges);
+        Reporter::new_coverage(iteration, outcome.new_coverage_edges);
     }
     let phase = input
         .mutation_phase

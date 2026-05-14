@@ -1,6 +1,7 @@
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 
+use super::interaction_fsa;
 use crate::fuzzing_engine::actions::{Action, ActionKind, ActionTarget};
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -72,6 +73,15 @@ pub fn action_sequence_from_metadata<R: Rng + ?Sized>(
     interactables: &[InteractableMetadata],
     action_hints: &[Action],
 ) -> Vec<Action> {
+    if rng.gen_range(0..100) >= 15 {
+        return interaction_fsa::generate_action_sequence(
+            rng,
+            base_count,
+            interactables,
+            action_hints,
+        );
+    }
+
     let max_len = base_count.max(1);
     let target_len = rng.gen_range(1..=max_len);
     let fallback_selectors = selectors_from_interactables(interactables);
@@ -132,6 +142,10 @@ pub fn mutate_action_sequence<R: Rng + ?Sized>(
     max_actions: usize,
     interactables: &[InteractableMetadata],
 ) -> bool {
+    if rng.gen_range(0..100) >= 15 {
+        return interaction_fsa::mutate_action_sequence(rng, actions, max_actions, interactables);
+    }
+
     let selectors = selectors_from_interactables(interactables);
     if actions.is_empty() {
         actions.push(random_action_from_metadata(rng, interactables, &selectors));
@@ -211,51 +225,81 @@ fn random_action_from_metadata<R: Rng + ?Sized>(
         weights.extend(std::iter::repeat_n("dragdrop", 12));
     }
 
-    match weights[rng.gen_range(0..weights.len())] {
-        "click" => Action::click(preferred_target(rng, interactables, fallback_selectors)),
-        "hover" => Action::hover(preferred_target(rng, interactables, fallback_selectors)),
-        "type" => Action::type_text(
-            target_matching(rng, interactables, |item| item.is_text_input)
-                .unwrap_or_else(|| preferred_target(rng, interactables, fallback_selectors)),
-            random_text(rng),
+    let (mut action, edge_id) = match weights[rng.gen_range(0..weights.len())] {
+        "click" => (
+            Action::click(preferred_target(rng, interactables, fallback_selectors)),
+            "random.click",
         ),
-        "clear" => Action {
-            kind: ActionKind::Clear,
-            target: Some(
+        "hover" => (
+            Action::hover(preferred_target(rng, interactables, fallback_selectors)),
+            "random.hover",
+        ),
+        "type" => (
+            Action::type_text(
                 target_matching(rng, interactables, |item| item.is_text_input)
                     .unwrap_or_else(|| preferred_target(rng, interactables, fallback_selectors)),
+                random_text(rng),
             ),
-            to: None,
-            text: None,
-            key: None,
-            x: None,
-            y: None,
-            millis: None,
-        },
-        "focus" => Action::focus(
-            target_matching(rng, interactables, |item| {
-                item.is_focusable || item.has_handler
-            })
-            .unwrap_or_else(|| preferred_target(rng, interactables, fallback_selectors)),
+            "random.type",
         ),
-        "dragdrop" => Action::drag_drop(
-            target_matching(rng, interactables, |item| item.is_draggable)
+        "clear" => (
+            Action {
+                kind: ActionKind::Clear,
+                edge_id: None,
+                target: Some(
+                    target_matching(rng, interactables, |item| item.is_text_input).unwrap_or_else(
+                        || preferred_target(rng, interactables, fallback_selectors),
+                    ),
+                ),
+                to: None,
+                text: None,
+                key: None,
+                x: None,
+                y: None,
+                millis: None,
+            },
+            "random.clear",
+        ),
+        "focus" => (
+            Action::focus(
+                target_matching(rng, interactables, |item| {
+                    item.is_focusable || item.has_handler
+                })
                 .unwrap_or_else(|| preferred_target(rng, interactables, fallback_selectors)),
-            target_matching(rng, interactables, |item| item.is_drop_target)
-                .unwrap_or_else(|| preferred_target(rng, interactables, fallback_selectors)),
+            ),
+            "random.focus",
         ),
-        "scroll" => Action::scroll(
-            rng.gen_range(-500_i64..=500_i64),
-            rng.gen_range(-500_i64..=500_i64),
+        "dragdrop" => (
+            Action::drag_drop(
+                target_matching(rng, interactables, |item| item.is_draggable)
+                    .unwrap_or_else(|| preferred_target(rng, interactables, fallback_selectors)),
+                target_matching(rng, interactables, |item| item.is_drop_target)
+                    .unwrap_or_else(|| preferred_target(rng, interactables, fallback_selectors)),
+            ),
+            "random.dragdrop",
         ),
-        "key" => Action::press_key(random_key(rng)),
-        _ => random_generic_action(rng, fallback_selectors),
+        "scroll" => (
+            Action::scroll(
+                rng.gen_range(-500_i64..=500_i64),
+                rng.gen_range(-500_i64..=500_i64),
+            ),
+            "random.scroll",
+        ),
+        "key" => (Action::press_key(random_key(rng)), "random.key"),
+        _ => (
+            random_generic_action(rng, fallback_selectors),
+            "random.fallback",
+        ),
+    };
+    if action.edge_id.is_none() {
+        action.edge_id = Some(edge_id.to_string());
     }
+    action
 }
 
 fn random_generic_action<R: Rng + ?Sized>(rng: &mut R, selectors: &[String]) -> Action {
     let target = random_dom_target(rng, selectors);
-    match rng.gen_range(0..12) {
+    let mut action = match rng.gen_range(0..12) {
         0 => Action::click(target),
         1 => Action::hover(target),
         2 => Action::focus(target),
@@ -267,7 +311,9 @@ fn random_generic_action<R: Rng + ?Sized>(rng: &mut R, selectors: &[String]) -> 
         5 => Action::press_key(random_key(rng)),
         6 => Action::sleep(rng.gen_range(10_u64..=200_u64)),
         _ => Action::click(target),
-    }
+    };
+    action.edge_id = Some("random.fallback".to_string());
+    action
 }
 
 fn mutate_action_params<R: Rng + ?Sized>(

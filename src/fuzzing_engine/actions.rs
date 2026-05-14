@@ -41,6 +41,9 @@ pub struct Action {
     pub kind: ActionKind,
 
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub edge_id: Option<String>,
+
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub target: Option<ActionTarget>,
 
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -173,6 +176,7 @@ impl Action {
     fn empty(kind: ActionKind) -> Self {
         Self {
             kind,
+            edge_id: None,
             target: None,
             to: None,
             text: None,
@@ -218,6 +222,7 @@ mod tests {
     fn validates_required_fields() {
         let action = Action {
             kind: ActionKind::TypeText,
+            edge_id: None,
             target: Some(ActionTarget::dom("#x1")),
             text: None,
             to: None,

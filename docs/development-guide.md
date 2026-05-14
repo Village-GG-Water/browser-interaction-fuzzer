@@ -84,6 +84,7 @@ DOM action:
 ```json
 {
   "kind": "click",
+  "edge_id": "dom.click.event",
   "target": {
     "space": "dom",
     "selector": "#x1"
@@ -105,6 +106,25 @@ Browser UI action:
 ```
 
 `browser_ui` target은 v1에서 protocol과 타입만 준비되어 있습니다. 실제 구현은 접근성 API backend를 추가하면서 연결합니다.
+
+`edge_id`는 optional field입니다. Rust mutation policy가 FSA 기반 interaction sequence를 만들 때 어떤 transition이 선택되었는지 기록하기 위한 trace이며, simulator는 이 값을 실행 조건으로 사용하지 않습니다. 기존 seed처럼 `edge_id`가 없는 action JSON도 유효합니다.
+
+### FSA 기반 interaction 생성
+
+Rust engine은 user-interaction sequence를 finite state automaton 기반으로 생성하고 변이합니다. FSA는 실행 결과를 관측하는 runtime checker가 아니라 generation/mutation-time guide입니다. simulator는 계속 action sequence를 순서대로 실행만 합니다.
+
+공통 state는 `PageReady`, `ElementPrimed`, `PointerOver`, `FocusedElement`, `TextFocused`, `AfterEvent`입니다. state는 DOM 전체 상태가 아니라 다음 interaction이 의미 있으려면 필요한 최소 전제를 나타냅니다. 예를 들어 `TextFocused`에서만 `type_text`와 `clear`를 만들고, `FocusedElement` 또는 `TextFocused`에서만 `press_key`를 만듭니다.
+
+공통 state machine은 모든 DOM에 공유되고, `dom-generator`가 반환한 interactable metadata로 edge를 materialize합니다.
+
+- `is_text_input`: `focus -> TextFocused`, `type_text`, `clear`
+- `is_focusable`: `focus -> FocusedElement`
+- `events`와 `has_handler`: click/hover/focus/input 계열 edge 가중치 증가
+- `is_draggable`와 `is_drop_target`: drag/drop pair edge
+
+`AfterEvent`는 실제 handler 실행을 보장하는 상태가 아닙니다. metadata상 event handler가 있거나 event-triggering action을 방금 생성했으므로, 짧은 `sleep`, follow-up click/focus, scroll 같은 후속 action을 붙일 수 있다는 generation state입니다.
+
+현재 단일 `snapshot.html` 실행 모델에서는 `back`과 `forward`를 공통 DOM FSA에서 생성하지 않습니다. multi-page testcase가 구현되면 navigation 상태는 별도 FSA로 확장합니다.
 
 ## Engine ↔ dom-generator protocol
 

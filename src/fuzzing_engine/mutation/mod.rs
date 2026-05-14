@@ -1,5 +1,6 @@
 pub mod action_ops;
 pub mod dom_ops;
+pub mod interaction_fsa;
 pub mod libafl_mutator;
 pub mod policy;
 pub mod scheduler;

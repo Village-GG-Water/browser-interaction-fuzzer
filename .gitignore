@@ -19,3 +19,7 @@ __pycache__/
 Thumbs.db
 .DS_Store
 /.vscode/
+
+# Gemini CLI instructions
+GEMINI.md
+

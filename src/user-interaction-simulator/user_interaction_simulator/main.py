@@ -10,9 +10,9 @@ import time
 from pathlib import Path
 from typing import Any
 
-from .browser_ui import BrowserUIBackend
+from .backend_loader import load_backend
 
-ui_backend = BrowserUIBackend()
+ui_backend = None
 
 
 INTERACTABLE_CSS = (
@@ -113,6 +113,7 @@ def serve() -> None:
 
 
 def initialize(message: dict[str, Any]) -> dict[str, Any]:
+    global ui_backend
     required = ["browser_path", "browser_kind", "sancov_dir", "asan_dir", "out_dir"]
     for key in required:
         if not message.get(key):
@@ -122,7 +123,9 @@ def initialize(message: dict[str, Any]) -> dict[str, Any]:
     Path(config["sancov_dir"]).mkdir(parents=True, exist_ok=True)
     Path(config["asan_dir"]).mkdir(parents=True, exist_ok=True)
     Path(config["out_dir"]).mkdir(parents=True, exist_ok=True)
-    log(f"[simulator] initialized browser_kind={config['browser_kind']}")
+    
+    ui_backend = load_backend(message.get("ui_backend"))
+    log(f"[simulator] initialized browser_kind={config['browser_kind']}, ui_backend={type(ui_backend).__name__}")
     return config
 
 
@@ -268,10 +271,31 @@ def execute_action(
     target = action.get("target")
 
     if target and target.get("space") == "browser_ui":
+        if ui_backend is None:
+             return False, 0
+        
         role = target.get("role")
         name = target.get("name")
-        ok = ui_backend.execute(kind, role, name, timeout=timeout_ms / 1000)
-        return ok, 0
+        timeout = timeout_ms / 1000
+        
+        element = ui_backend.find_element(role, name, timeout)
+        if not element: 
+            return False, 0
+        
+        if kind == "click":
+            return ui_backend.click(element), 0
+        elif kind == "focus":
+            return ui_backend.focus(element), 0
+        elif kind == "type_text":
+            return ui_backend.type_text(element, action.get("text", "")), 0
+        elif kind == "drag_drop":
+            dst_target = action.get("to")
+            if dst_target and dst_target.get("space") == "browser_ui":
+                dst_element = ui_backend.find_element(dst_target.get("role"), dst_target.get("name"), timeout)
+                if dst_element:
+                    return ui_backend.drag_drop(element, dst_element), 0
+        
+        return False, 0
 
     try:
         if kind == "click":

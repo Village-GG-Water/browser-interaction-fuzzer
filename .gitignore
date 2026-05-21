@@ -24,3 +24,7 @@ Thumbs.db
 GEMINI.md
 
 .worktrees/
+
+# Agent and CLI local states
+.superpowers/
+.gemini/

@@ -290,7 +290,8 @@ def execute_action(
 def safe_url(page: Page) -> str:
     try:
         return str(page.url)
-    except Exception:
+    except PlaywrightError as e:
+        logging.debug(f"safe_url failed: {e}")
         return ""
 
 

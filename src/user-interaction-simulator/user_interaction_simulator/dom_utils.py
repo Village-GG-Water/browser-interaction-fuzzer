@@ -2,9 +2,10 @@
 from __future__ import annotations
 
 import random
+import logging
 from typing import Any
 
-from playwright.sync_api import Page, ElementHandle
+from playwright.sync_api import Page, ElementHandle, Error as PlaywrightError
 
 from .constants import EVENT_HANDLER_CSS
 
@@ -20,8 +21,8 @@ def resolve_dom_target(page: Page, target: dict[str, Any] | None, fallback_css: 
             element = page.query_selector(selector)
             if element:
                 return element, 0
-        except Exception:
-            pass
+        except PlaywrightError as e:
+            logging.debug(f"Selector '{selector}' query failed: {e}")
 
     if not allow_fallback:
         return None, 0
@@ -30,15 +31,15 @@ def resolve_dom_target(page: Page, target: dict[str, Any] | None, fallback_css: 
         handlers = page.query_selector_all(EVENT_HANDLER_CSS)
         if handlers:
             return random.choice(handlers), 1
-    except Exception:
-        pass
+    except PlaywrightError as e:
+        logging.debug(f"Fallback handler query failed: {e}")
 
     try:
         elements = page.query_selector_all(fallback_css)
         if elements:
             return random.choice(elements), 1
-    except Exception:
-        pass
+    except PlaywrightError as e:
+        logging.debug(f"Fallback css query failed: {e}")
 
     return None, 1
 
@@ -60,7 +61,8 @@ def inspect_action_target(page: Page, target: dict[str, Any] | None, target_cach
                 "y": float(box["y"]) + float(box["height"]) / 2.0,
             }
         return {"exists": True}
-    except Exception:
+    except PlaywrightError as e:
+        logging.debug(f"inspect_action_target query failed for '{selector}': {e}")
         return {"exists": False}
 
 

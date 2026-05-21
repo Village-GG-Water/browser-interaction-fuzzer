@@ -27,7 +27,11 @@ class AtspiBackend(BaseBackend):
                 app = self.desktop.get_child_at_index(i)
                 if app and app.get_name() in ["Google Chrome", "Chromium"]:
                     return True
-            except Exception: continue
+            except IndexError:
+                continue
+            except Exception as e:
+                logging.debug(f"AT-SPI error in refresh_context reading child {i}: {e}")
+                continue
         return False
 
     def find_element(self, role_name: str, element_name: str, timeout: float) -> Optional[Any]:
@@ -54,20 +58,25 @@ class AtspiBackend(BaseBackend):
                 "enabled": state_set.contains(Atspi.StateType.ENABLED),
                 "focusable": state_set.contains(Atspi.StateType.FOCUSABLE),
             }
-        except Exception:
+        except Exception as e:
+            logging.debug(f"AT-SPI get_element_state failed: {e}")
             return {"visible": False}
 
     def click(self, element: Any) -> bool:
         try:
             action = element.get_action_iface()
             return action.do_action(0) if action and action.get_n_actions() > 0 else False
-        except Exception: return False
+        except Exception as e:
+            logging.debug(f"AT-SPI click failed: {e}")
+            return False
 
     def focus(self, element: Any) -> bool:
         try:
             component = element.get_component_iface()
             return component.grab_focus() if component else False
-        except Exception: return False
+        except Exception as e:
+            logging.debug(f"AT-SPI focus failed: {e}")
+            return False
 
     def type_text(self, element: Any, text: str) -> bool:
         # AT-SPI level typing is complex; keeping it False for now as per design
@@ -93,7 +102,11 @@ class AtspiBackend(BaseBackend):
                 app = self.desktop.get_child_at_index(i)
                 if app and app.get_name() in ["Google Chrome", "Chromium"]:
                     return app
-            except Exception: continue
+            except IndexError:
+                continue
+            except Exception as e:
+                logging.debug(f"AT-SPI error in _get_browser_app reading child {i}: {e}")
+                continue
         return None
 
     def _dfs(self, node, role, name):
@@ -105,5 +118,6 @@ class AtspiBackend(BaseBackend):
             for i in range(node.get_child_count()):
                 found = self._dfs(node.get_child_at_index(i), role, name)
                 if found: return found
-        except Exception: pass
+        except Exception as e:
+            logging.debug(f"AT-SPI error in _dfs: {e}")
         return None

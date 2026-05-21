@@ -28,3 +28,5 @@ GEMINI.md
 # Agent and CLI local states
 .superpowers/
 .gemini/
+.geminiignore
+docs/superpowers/

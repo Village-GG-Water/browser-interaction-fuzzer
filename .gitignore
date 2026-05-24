@@ -23,3 +23,10 @@ Thumbs.db
 # Gemini CLI instructions
 GEMINI.md
 
+.worktrees/
+
+# Agent and CLI local states
+.superpowers/
+.gemini/
+.geminiignore
+docs/superpowers/

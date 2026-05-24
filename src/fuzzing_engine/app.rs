@@ -1,13 +1,17 @@
 use std::cell::RefCell;
+use std::env;
 use std::fs;
+use std::io::{BufRead, BufReader, Read};
 use std::num::NonZeroUsize;
 use std::path::{Path, PathBuf};
+use std::process::{Child, Command, ExitStatus, Stdio};
 use std::rc::Rc;
 use std::sync::{
     Arc,
     atomic::{AtomicBool, Ordering},
 };
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::thread::{self, JoinHandle};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use libafl::corpus::{Corpus, InMemoryCorpus, Testcase};
 use libafl::events::NopEventManager;
@@ -60,6 +64,84 @@ impl FuzzingApp {
     }
 
     pub fn run(&mut self) -> EngineResult<()> {
+        if self.config.should_run_managed_parallel() {
+            return self.run_managed_parallel();
+        }
+        self.run_worker()
+    }
+
+    fn run_managed_parallel(&self) -> EngineResult<()> {
+        Reporter::print_config(&self.config);
+        let worker_count = self.config.parallel_workers;
+        let exe = env::current_exe()?;
+        let stop_requested = Arc::clone(&self.stop_requested);
+        ctrlc::set_handler(move || {
+            if stop_requested.swap(true, Ordering::SeqCst) {
+                eprintln!("[signal] second Ctrl+C received, exiting immediately");
+                std::process::exit(130);
+            }
+            eprintln!("[signal] Ctrl+C received, stopping managed workers");
+        })?;
+
+        let mut workers = Vec::new();
+        for worker_id in 0..worker_count {
+            workers.push(spawn_worker(&self.config, &exe, worker_id, worker_count)?);
+        }
+
+        println!("[parallel] launched {worker_count} workers");
+        let mut remaining = workers.len();
+        let mut stop_deadline = None;
+        while remaining > 0 {
+            if self.stop_requested.load(Ordering::SeqCst) {
+                let deadline =
+                    stop_deadline.get_or_insert_with(|| Instant::now() + Duration::from_secs(2));
+                if Instant::now() >= *deadline {
+                    for worker in workers.iter_mut().filter(|worker| worker.status.is_none()) {
+                        eprintln!("[parallel] killing worker {}", worker.id);
+                        let _ = worker.child.kill();
+                    }
+                }
+            }
+
+            for worker in workers.iter_mut().filter(|worker| worker.status.is_none()) {
+                if let Some(status) = worker.child.try_wait()? {
+                    println!("[parallel] worker {} exited with {status}", worker.id);
+                    worker.status = Some(status);
+                    remaining -= 1;
+                }
+            }
+
+            if remaining > 0 {
+                thread::sleep(Duration::from_millis(100));
+            }
+        }
+
+        let mut failed = Vec::new();
+        for mut worker in workers {
+            if let Some(thread) = worker.stdout_thread.take() {
+                let _ = thread.join();
+            }
+            if let Some(thread) = worker.stderr_thread.take() {
+                let _ = thread.join();
+            }
+            let Some(status) = worker.status else {
+                failed.push(worker.id);
+                continue;
+            };
+            if !status.success() {
+                failed.push(worker.id);
+            }
+        }
+
+        if failed.is_empty() {
+            println!("[parallel] all workers completed successfully");
+            Ok(())
+        } else {
+            Err(engine_error(format!("workers failed: {failed:?}")))
+        }
+    }
+
+    fn run_worker(&mut self) -> EngineResult<()> {
         Reporter::print_config(&self.config);
         let crash_session_dir = self
             .config
@@ -229,7 +311,12 @@ impl FuzzingApp {
         let Some(seed_dir) = &self.config.initial_seed_dir else {
             return Ok(Vec::new());
         };
-        SeedStore::new(seed_dir.clone()).load_all()
+        let seeds = SeedStore::new(seed_dir.clone()).load_all()?;
+        Ok(partition_worker_seeds(
+            seeds,
+            self.config.worker_id,
+            self.config.worker_count,
+        ))
     }
 
     fn create_generated_seed(
@@ -381,6 +468,102 @@ fn record_outcome(
 
 fn total_executions(metrics: &RunMetrics) -> u64 {
     metrics.iterations + metrics.infra_errors
+}
+
+struct ManagedWorker {
+    id: usize,
+    child: Child,
+    status: Option<ExitStatus>,
+    stdout_thread: Option<JoinHandle<()>>,
+    stderr_thread: Option<JoinHandle<()>>,
+}
+
+fn spawn_worker(
+    config: &AppConfig,
+    exe: &Path,
+    worker_id: usize,
+    worker_count: usize,
+) -> EngineResult<ManagedWorker> {
+    let out_dir = config.out_dir.join("workers").join(worker_id.to_string());
+    let crash_dir = config.crash_dir.join("workers").join(worker_id.to_string());
+
+    let mut command = Command::new(exe);
+    command
+        .current_dir(&config.workspace_dir)
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .env("WORKER_ID", worker_id.to_string())
+        .env("WORKER_COUNT", worker_count.to_string())
+        .env("PARALLEL_WORKERS", worker_count.to_string())
+        .env("OUT_DIR", &out_dir)
+        .env("CRASH_DIR", &crash_dir);
+
+    if let Some(max_iterations) = config.max_iterations {
+        let per_worker = max_iterations.div_ceil(worker_count as u64).max(1);
+        command.env("MAX_ITERATIONS", per_worker.to_string());
+    }
+
+    let mut child = command
+        .spawn()
+        .map_err(|error| engine_error(format!("failed to spawn worker {worker_id}: {error}")))?;
+    let stdout = child
+        .stdout
+        .take()
+        .ok_or_else(|| engine_error(format!("worker {worker_id} stdout was not piped")))?;
+    let stderr = child
+        .stderr
+        .take()
+        .ok_or_else(|| engine_error(format!("worker {worker_id} stderr was not piped")))?;
+
+    Ok(ManagedWorker {
+        id: worker_id,
+        child,
+        status: None,
+        stdout_thread: Some(prefix_worker_output(worker_id, "stdout", stdout)),
+        stderr_thread: Some(prefix_worker_output(worker_id, "stderr", stderr)),
+    })
+}
+
+fn prefix_worker_output<R>(worker_id: usize, stream_name: &'static str, stream: R) -> JoinHandle<()>
+where
+    R: Read + Send + 'static,
+{
+    thread::spawn(move || {
+        let reader = BufReader::new(stream);
+        for line in reader.lines() {
+            match line {
+                Ok(line) if stream_name == "stderr" => {
+                    eprintln!("[worker {worker_id} {stream_name}] {line}");
+                }
+                Ok(line) => {
+                    println!("[worker {worker_id} {stream_name}] {line}");
+                }
+                Err(error) => {
+                    eprintln!("[worker {worker_id} {stream_name}] read failed: {error}");
+                    break;
+                }
+            }
+        }
+    })
+}
+
+fn partition_worker_seeds(
+    seeds: Vec<SeedInput>,
+    worker_id: Option<usize>,
+    worker_count: usize,
+) -> Vec<SeedInput> {
+    let Some(worker_id) = worker_id else {
+        return seeds;
+    };
+    if worker_count <= 1 {
+        return seeds;
+    }
+    seeds
+        .into_iter()
+        .enumerate()
+        .filter_map(|(index, seed)| (index % worker_count == worker_id).then_some(seed))
+        .collect()
 }
 
 fn new_session_id() -> String {

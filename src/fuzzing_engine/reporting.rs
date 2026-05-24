@@ -23,8 +23,20 @@ impl Reporter {
             Some(seed_dir) => report!("[config] initial_seed_dir={}", seed_dir.display()),
             None => report!("[config] initial_seed_dir=<generated>"),
         }
+        let worker_label = match config.worker_id {
+            Some(worker_id) => format!("{worker_id}/{}", config.worker_count),
+            None if config.parallel_workers > 1 => "<parent>".to_string(),
+            None => "<single>".to_string(),
+        };
+        report!(
+            "[config] parallel_workers={} worker={worker_label}",
+            config.parallel_workers
+        );
         report!("[config] libafl_corpus=in-memory");
         report!("[config] out={}", config.out_dir.display());
+        report!("[config] crash_dir={}", config.crash_dir.display());
+        report!("[config] sancov_dir={}", config.sancov_dir.display());
+        report!("[config] asan_dir={}", config.asan_dir.display());
     }
 
     pub fn session_started(session_id: &str, crash_session_dir: &std::path::Path) {

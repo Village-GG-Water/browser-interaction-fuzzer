@@ -67,6 +67,8 @@ Rust engine은 LibAFL 기반입니다.
 - `MaxMapFeedback`: SanCov PC를 Rust coverage map에 반영해서 새로운 coverage를 판단합니다.
 - `CrashFeedback`: simulator timeout/crash와 ASAN 결과를 crash objective로 연결합니다.
 
+`PARALLEL_WORKERS`를 2 이상으로 설정하면 parent process가 worker process들을 띄웁니다. 각 worker는 기존 LibAFL `fuzz_one` 흐름을 유지하고, `out/workers/<id>`와 `crashes/workers/<id>` 아래에 SanCov/ASAN/profile/crash artifact를 분리해서 저장합니다. v1에서는 worker-local corpus/coverage를 사용하며 raw coverage map을 실시간 공유하지 않습니다.
+
 crash artifact는 fuzzing engine 시작 시 부여된 session id 아래에 저장됩니다.
 
 ```text

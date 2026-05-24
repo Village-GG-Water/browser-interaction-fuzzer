@@ -30,12 +30,16 @@ pub struct AppConfig {
     pub inter_action_delay_ms: u64,
     pub disable_breakpad: bool,
     pub asan_symbolizer_path: Option<String>,
+    pub parallel_workers: usize,
+    pub worker_id: Option<usize>,
+    pub worker_count: usize,
 }
 
 impl AppConfig {
     pub fn load() -> EngineResult<Self> {
         let workspace_dir = env::current_dir()?;
-        let vars = read_dotenv(&workspace_dir.join(".env"))?;
+        let mut vars = read_dotenv(&workspace_dir.join(".env"))?;
+        overlay_environment(&mut vars);
 
         if !vars.contains_key("BROWSER_PATH") && vars.contains_key("CHROME_PATH") {
             return Err(engine_error(
@@ -50,6 +54,16 @@ impl AppConfig {
         let crash_dir = path_var(&workspace_dir, &vars, "CRASH_DIR", "crashes");
         let initial_seed_dir = optional_path_var(&workspace_dir, &vars, "INITIAL_SEED_DIR")
             .or_else(|| optional_path_var(&workspace_dir, &vars, "SEED_DIR"));
+        let parallel_workers = usize_var(&vars, "PARALLEL_WORKERS", 1);
+        let worker_id = optional_usize_var(&vars, "WORKER_ID");
+        let worker_count = optional_usize_var(&vars, "WORKER_COUNT").unwrap_or(parallel_workers);
+        if let Some(worker_id) = worker_id
+            && worker_id >= worker_count
+        {
+            return Err(engine_error(format!(
+                "`WORKER_ID` ({worker_id}) must be less than `WORKER_COUNT` ({worker_count})"
+            )));
+        }
 
         Ok(Self {
             dom_generator_dir: path_var(
@@ -84,6 +98,9 @@ impl AppConfig {
             initial_seed_dir,
             browser_path,
             browser_kind,
+            parallel_workers,
+            worker_id,
+            worker_count,
         })
     }
 
@@ -98,6 +115,10 @@ impl AppConfig {
             fs::create_dir_all(dir)?;
         }
         Ok(())
+    }
+
+    pub fn should_run_managed_parallel(&self) -> bool {
+        self.parallel_workers > 1 && self.worker_id.is_none()
     }
 }
 
@@ -132,6 +153,39 @@ fn read_dotenv(path: &PathBuf) -> EngineResult<HashMap<String, String>> {
         vars.insert(key.to_string(), value);
     }
     Ok(vars)
+}
+
+fn overlay_environment(vars: &mut HashMap<String, String>) {
+    for key in [
+        "BROWSER_PATH",
+        "BROWSER_KIND",
+        "OUT_DIR",
+        "CRASH_DIR",
+        "INITIAL_SEED_DIR",
+        "SEED_DIR",
+        "DOM_GENERATOR_DIR",
+        "SIMULATOR_DIR",
+        "MAX_ACTIONS",
+        "SEED_INPUTS",
+        "SEED_ACTIONS",
+        "MAX_ITERATIONS",
+        "ITERATION_TIMEOUT_MS",
+        "ACTION_TIMEOUT_MS",
+        "PAGE_READY_TIMEOUT_MS",
+        "POST_ACTIONS_SETTLE_MS",
+        "INTER_ACTION_DELAY_MS",
+        "DISABLE_BREAKPAD",
+        "ASAN_SYMBOLIZER_PATH",
+        "PARALLEL_WORKERS",
+        "WORKER_ID",
+        "WORKER_COUNT",
+    ] {
+        if let Ok(value) = env::var(key)
+            && !value.trim().is_empty()
+        {
+            vars.insert(key.to_string(), value);
+        }
+    }
 }
 
 fn required_var(vars: &HashMap<String, String>, key: &str) -> EngineResult<String> {
@@ -170,6 +224,12 @@ fn usize_var(vars: &HashMap<String, String>, key: &str, default: usize) -> usize
         .and_then(|value| value.parse().ok())
         .filter(|value| *value > 0)
         .unwrap_or(default)
+}
+
+fn optional_usize_var(vars: &HashMap<String, String>, key: &str) -> Option<usize> {
+    optional_var(vars, key)
+        .and_then(|value| value.parse().ok())
+        .filter(|value| *value > 0 || key == "WORKER_ID")
 }
 
 fn u64_var(vars: &HashMap<String, String>, key: &str, default: u64) -> u64 {

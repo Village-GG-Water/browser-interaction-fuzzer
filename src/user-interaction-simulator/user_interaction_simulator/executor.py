@@ -1,11 +1,13 @@
 # src/user-interaction-simulator/user_interaction_simulator/executor.py
 from __future__ import annotations
 
+import logging
 import time
 from pathlib import Path
 from typing import Any
 
-from playwright.sync_api import Playwright, TimeoutError as PlaywrightTimeoutError, Page
+from playwright.sync_api import Error as PlaywrightError
+from playwright.sync_api import Page, Playwright, TimeoutError as PlaywrightTimeoutError
 
 from .base import BaseBackend
 from .browser_env import (

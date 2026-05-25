@@ -7,12 +7,11 @@ from pathlib import Path
 from typing import Any
 
 from playwright.sync_api import Error as PlaywrightError
-from playwright.sync_api import Page, Playwright, TimeoutError as PlaywrightTimeoutError
+from playwright.sync_api import Page, TimeoutError as PlaywrightTimeoutError
 
 from .base import BaseBackend
 from .browser_env import (
-    launch_context,
-    close_context,
+    BrowserSession,
     config_timeout,
     path_to_file_url,
 )
@@ -32,7 +31,7 @@ from .dom_utils import (
 )
 
 
-def run_testcase(pw: Playwright, config: dict[str, Any], message: dict[str, Any], ui_backend: BaseBackend | None) -> dict[str, Any]:
+def run_testcase(browser_session: BrowserSession, config: dict[str, Any], message: dict[str, Any], ui_backend: BaseBackend | None) -> dict[str, Any]:
     started = now_ms()
     deadline = iteration_deadline(started, config)
     timings = {
@@ -67,7 +66,7 @@ def run_testcase(pw: Playwright, config: dict[str, Any], message: dict[str, Any]
 
     try:
         phase = now_ms()
-        browser, context = launch_context(pw, config, profile_dir)
+        browser, context = browser_session.open_context(profile_dir)
         timings["launch_ms"] = elapsed_ms(phase)
 
         page = context.new_page()
@@ -139,7 +138,7 @@ def run_testcase(pw: Playwright, config: dict[str, Any], message: dict[str, Any]
         timings["actions_ms"] = elapsed_ms(phase)
 
         phase = now_ms()
-        close_context(browser, context, profile_dir)
+        browser_session.close_context(browser, context, profile_dir)
         browser = None
         context = None
         timings["close_ms"] = elapsed_ms(phase)
@@ -149,7 +148,8 @@ def run_testcase(pw: Playwright, config: dict[str, Any], message: dict[str, Any]
 
     except Exception as exc:
         phase = now_ms()
-        close_context(browser, context, profile_dir)
+        discard_browser = is_crash_error(exc)
+        browser_session.close_context(browser, context, profile_dir, discard_browser=discard_browser)
         timings["close_ms"] += elapsed_ms(phase)
         text = str(exc)
         if isinstance(exc, PlaywrightTimeoutError) or "timeout" in text.lower():

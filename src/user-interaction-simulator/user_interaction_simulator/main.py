@@ -9,7 +9,7 @@ from typing import Any
 
 from .backend_loader import load_backend
 from .base import BaseBackend
-from .browser_env import start_playwright
+from .browser_env import BrowserSession, start_playwright
 from .executor import run_testcase
 
 
@@ -29,6 +29,7 @@ def main() -> None:
 def serve() -> None:
     config: dict[str, Any] | None = None
     playwright = None
+    browser_session: BrowserSession | None = None
     ui_backend: BaseBackend | None = None
 
     try:
@@ -48,12 +49,13 @@ def serve() -> None:
                 if cmd == "initialize":
                     config, ui_backend = initialize(message)
                     playwright = start_playwright()
+                    browser_session = BrowserSession(playwright, config)
                     respond({"status": "ok"})
                 elif cmd == "run_testcase":
-                    if config is None or playwright is None:
+                    if config is None or browser_session is None:
                         respond({"status": "error", "reason": "not initialized"})
                         continue
-                    respond(run_testcase(playwright, config, message, ui_backend))
+                    respond(run_testcase(browser_session, config, message, ui_backend))
                 elif cmd == "shutdown":
                     respond({"status": "ok"})
                     break
@@ -62,6 +64,8 @@ def serve() -> None:
             except Exception as exc:
                 respond({"status": "error", "reason": str(exc)[:500]})
     finally:
+        if browser_session is not None:
+            browser_session.close()
         if playwright is not None:
             playwright.stop()
 

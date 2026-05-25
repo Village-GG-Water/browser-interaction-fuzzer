@@ -59,6 +59,20 @@ class TestExecuteActionExceptionClassification(unittest.TestCase):
         ):
             self.assertEqual(execute_action(None, {"kind": "click"}, 300, {}, None), (False, 0))
 
+    def test_sleep_action_uses_requested_delay_without_deadline(self):
+        with patch("user_interaction_simulator.executor.time.sleep") as sleep:
+            self.assertEqual(
+                execute_action(None, {"kind": "sleep", "millis": 5}, 300, {}, None),
+                (True, 0),
+            )
+        sleep.assert_called_once_with(0.005)
+
+    def test_sleep_action_raises_when_iteration_deadline_has_expired(self):
+        with patch("user_interaction_simulator.executor.time.sleep") as sleep:
+            with self.assertRaises(PlaywrightTimeoutError):
+                execute_action(None, {"kind": "sleep", "millis": 5}, 300, {}, None, deadline=0.0)
+        sleep.assert_not_called()
+
 
 if __name__ == "__main__":
     unittest.main()

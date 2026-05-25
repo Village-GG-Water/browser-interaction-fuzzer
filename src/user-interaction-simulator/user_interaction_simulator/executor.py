@@ -34,6 +34,7 @@ from .dom_utils import (
 
 def run_testcase(pw: Playwright, config: dict[str, Any], message: dict[str, Any], ui_backend: BaseBackend | None) -> dict[str, Any]:
     started = now_ms()
+    deadline = iteration_deadline(started, config)
     timings = {
         "launch_ms": 0,
         "load_ms": 0,
@@ -97,10 +98,18 @@ def run_testcase(pw: Playwright, config: dict[str, Any], message: dict[str, Any]
         inter_delay = int(config.get("inter_action_delay_ms") or 0)
         target_cache: dict[str, dict[str, float]] = {}
         for index, action in enumerate(message.get("actions", [])):
+            enforce_deadline(deadline)
             action_started = now_ms()
             before = inspect_action_target(page, action.get("target"), target_cache)
             url_before = safe_url(page)
-            ok, fallbacks = execute_action(page, action, action_timeout, target_cache, ui_backend)
+            ok, fallbacks = execute_action(
+                page,
+                action,
+                remaining_timeout_ms(deadline, action_timeout),
+                target_cache,
+                ui_backend,
+                deadline,
+            )
             action_ms = elapsed_ms(action_started)
             after = inspect_action_target(page, action.get("target"), target_cache)
             url_after = safe_url(page)
@@ -122,11 +131,11 @@ def run_testcase(pw: Playwright, config: dict[str, Any], message: dict[str, Any]
                 "url_after": url_after,
             })
             if inter_delay > 0:
-                time.sleep(inter_delay / 1000)
+                sleep_with_deadline(inter_delay, deadline)
 
         settle = int(config.get("post_actions_settle_ms") or 0)
         if settle > 0:
-            time.sleep(settle / 1000)
+            sleep_with_deadline(settle, deadline)
         timings["actions_ms"] = elapsed_ms(phase)
 
         phase = now_ms()
@@ -162,6 +171,7 @@ def execute_action(
     timeout_ms: int,
     target_cache: dict[str, dict[str, float]],
     ui_backend: BaseBackend | None,
+    deadline: float | None = None,
 ) -> tuple[bool, int]:
     kind = action.get("kind")
     target = action.get("target")
@@ -172,7 +182,7 @@ def execute_action(
         
         role = target.get("role")
         name = target.get("name")
-        timeout = timeout_ms / 1000.0
+        timeout = remaining_timeout_ms(deadline, timeout_ms) / 1000.0
         
         element = ui_backend.find_element(role, name, timeout)
         if not element: 
@@ -199,7 +209,7 @@ def execute_action(
                 return click_cached_point(page, target, target_cache)
             element, fallback = resolve_dom_target(page, target, INTERACTABLE_CSS)
             if element:
-                element.click(timeout=timeout_ms)
+                element.click(timeout=remaining_timeout_ms(deadline, timeout_ms))
                 return True, fallback
             return False, fallback
         if kind == "double_click":
@@ -207,7 +217,7 @@ def execute_action(
                 return click_cached_point(page, target, target_cache, click_count=2)
             element, fallback = resolve_dom_target(page, target, INTERACTABLE_CSS)
             if element:
-                element.dblclick(timeout=timeout_ms)
+                element.dblclick(timeout=remaining_timeout_ms(deadline, timeout_ms))
                 return True, fallback
             return False, fallback
         if kind == "right_click":
@@ -215,26 +225,26 @@ def execute_action(
                 return click_cached_point(page, target, target_cache, button="right")
             element, fallback = resolve_dom_target(page, target, INTERACTABLE_CSS)
             if element:
-                element.click(button="right", timeout=timeout_ms)
+                element.click(button="right", timeout=remaining_timeout_ms(deadline, timeout_ms))
                 return True, fallback
             return False, fallback
         if kind == "type_text":
             element, fallback = resolve_dom_target(page, target, TEXT_INPUTS_CSS)
             if element:
-                element.type(str(action.get("text", "")), timeout=timeout_ms)
+                element.type(str(action.get("text", "")), timeout=remaining_timeout_ms(deadline, timeout_ms))
                 return True, fallback
             return False, fallback
         if kind == "clear":
             element, fallback = resolve_dom_target(page, target, TEXT_INPUTS_CSS)
             if element:
-                element.fill("", timeout=timeout_ms)
+                element.fill("", timeout=remaining_timeout_ms(deadline, timeout_ms))
                 return True, fallback
             return False, fallback
         if kind == "drag_drop":
             src, first_fallback = resolve_dom_target(page, target, DRAGGABLE_CSS)
             dst, second_fallback = resolve_dom_target(page, action.get("to"), DRAGGABLE_CSS)
             if src and dst:
-                src.drag_to(dst, timeout=timeout_ms)
+                src.drag_to(dst, timeout=remaining_timeout_ms(deadline, timeout_ms))
                 return True, first_fallback + second_fallback
             return False, first_fallback + second_fallback
         if kind == "scroll":
@@ -243,7 +253,7 @@ def execute_action(
         if kind == "scroll_into_view":
             element, fallback = resolve_dom_target(page, target, INTERACTABLE_CSS)
             if element:
-                element.scroll_into_view_if_needed(timeout=timeout_ms)
+                element.scroll_into_view_if_needed(timeout=remaining_timeout_ms(deadline, timeout_ms))
                 return True, fallback
             return False, fallback
         if kind == "focus":
@@ -265,23 +275,23 @@ def execute_action(
                 return hover_cached_point(page, target, target_cache)
             element, fallback = resolve_dom_target(page, target, INTERACTABLE_CSS)
             if element:
-                element.hover(timeout=timeout_ms)
+                element.hover(timeout=remaining_timeout_ms(deadline, timeout_ms))
                 return True, fallback
             return False, fallback
         if kind == "press_key":
             page.keyboard.press(str(action.get("key") or "Enter"))
             return True, 0
         if kind == "refresh":
-            page.reload(timeout=timeout_ms)
+            page.reload(timeout=remaining_timeout_ms(deadline, timeout_ms))
             return True, 0
         if kind == "back":
-            page.go_back(timeout=timeout_ms)
+            page.go_back(timeout=remaining_timeout_ms(deadline, timeout_ms))
             return True, 0
         if kind == "forward":
-            page.go_forward(timeout=timeout_ms)
+            page.go_forward(timeout=remaining_timeout_ms(deadline, timeout_ms))
             return True, 0
         if kind == "sleep":
-            time.sleep(int(action.get("millis") or 1) / 1000.0)
+            sleep_with_deadline(int(action.get("millis") or 1), deadline)
             return True, 0
     except Exception as exc:
         if is_timeout_error(exc) or is_crash_error(exc):
@@ -307,6 +317,36 @@ def is_crash_error(exc: Exception) -> bool:
 
 def is_timeout_error(exc: Exception) -> bool:
     return isinstance(exc, PlaywrightTimeoutError) or "timeout" in str(exc).lower()
+
+
+def iteration_deadline(started: float, config: dict[str, Any]) -> float | None:
+    timeout_ms = config_timeout(config)
+    if timeout_ms <= 0:
+        return None
+    return started + (timeout_ms / 1000.0)
+
+
+def enforce_deadline(deadline: float | None) -> None:
+    remaining_timeout_ms(deadline, 1)
+
+
+def remaining_timeout_ms(deadline: float | None, fallback_ms: int) -> int:
+    if deadline is None:
+        return max(1, int(fallback_ms))
+    remaining_ms = int((deadline - now_ms()) * 1000)
+    if remaining_ms <= 0:
+        raise PlaywrightTimeoutError("iteration timeout")
+    return max(1, min(int(fallback_ms), remaining_ms))
+
+
+def sleep_with_deadline(millis: int, deadline: float | None) -> None:
+    requested_ms = max(0, int(millis))
+    if requested_ms == 0:
+        return
+    sleep_ms = remaining_timeout_ms(deadline, requested_ms)
+    time.sleep(sleep_ms / 1000.0)
+    if sleep_ms < requested_ms:
+        raise PlaywrightTimeoutError("iteration timeout")
 
 
 def now_ms() -> float:

@@ -283,7 +283,10 @@ def execute_action(
         if kind == "sleep":
             time.sleep(int(action.get("millis") or 1) / 1000.0)
             return True, 0
-    except Exception:
+    except Exception as exc:
+        if is_timeout_error(exc) or is_crash_error(exc):
+            raise
+        logging.debug(f"action {kind!r} failed: {exc}")
         return False, 0
 
     return False, 0
@@ -300,6 +303,10 @@ def safe_url(page: Page) -> str:
 def is_crash_error(exc: Exception) -> bool:
     text = str(exc).lower()
     return any(marker in text for marker in CRASH_MARKERS)
+
+
+def is_timeout_error(exc: Exception) -> bool:
+    return isinstance(exc, PlaywrightTimeoutError) or "timeout" in str(exc).lower()
 
 
 def now_ms() -> float:

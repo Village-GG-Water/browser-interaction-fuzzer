@@ -20,5 +20,11 @@ class TestBackendLoader(unittest.TestCase):
         backend = load_backend()
         self.assertIsNotNone(backend)
 
+    @unittest.skipUnless(sys.platform.startswith("win"), "windows only")
+    def test_load_windows_explicit(self):
+        # uiautomation이 설치되어 있으면 UiaBackend, 아니면 NullBackend로 graceful fallback
+        backend = load_backend("windows")
+        self.assertIsNotNone(backend)
+
 if __name__ == '__main__':
     unittest.main()

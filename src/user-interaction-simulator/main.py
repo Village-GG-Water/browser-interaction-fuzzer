@@ -33,8 +33,8 @@ def serve() -> None:
     ui_backend: BaseBackend | None = None
 
     try:
-        for raw_line in sys.stdin:
-            line = raw_line.strip()
+        for raw_line in sys.stdin.buffer:
+            line = raw_line.decode("utf-8", errors="replace").strip()
             if not line:
                 continue
 
@@ -87,8 +87,8 @@ def initialize(message: dict[str, Any]) -> tuple[dict[str, Any], BaseBackend]:
 
 
 def respond(message: dict[str, Any]) -> None:
-    sys.stdout.write(json.dumps(message, ensure_ascii=False) + "\n")
-    sys.stdout.flush()
+    sys.stdout.buffer.write((json.dumps(message, ensure_ascii=False) + "\n").encode("utf-8"))
+    sys.stdout.buffer.flush()
 
 
 def log(message: str) -> None:

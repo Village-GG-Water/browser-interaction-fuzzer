@@ -16,7 +16,7 @@ class BrowserSession:
     def __init__(self, pw: Playwright, config: dict[str, Any]):
         self.pw = pw
         self.config = config
-        self.reuse_browser = bool_env("SIMULATOR_REUSE_BROWSER")
+        self.reuse_browser = bool(config.get("reuse_browser"))
         self.browser: Browser | None = None
 
     def open_context(self, profile_dir: Path) -> tuple[Browser, BrowserContext]:
@@ -91,10 +91,6 @@ def is_browser_connected(browser: Browser) -> bool:
         return browser.is_connected()
     except Exception:
         return False
-
-def bool_env(name: str) -> bool:
-    value = os.environ.get(name, "")
-    return value.strip().lower() in {"1", "true", "yes", "on"}
 
 def browser_env(config: dict[str, Any]) -> dict[str, str]:
     symbolizer = config.get("asan_symbolizer_path")

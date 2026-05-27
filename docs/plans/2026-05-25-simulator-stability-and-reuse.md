@@ -51,11 +51,17 @@ deadline이 적용되는 위치는 다음과 같다.
 
 browser process 재사용 모드를 opt-in 기능으로 추가했다.
 
-사용 방법:
+사용 방법 (`.env` 또는 inline env):
 
 ```bash
+# .env
+SIMULATOR_REUSE_BROWSER=true
+
+# 또는 inline
 SIMULATOR_REUSE_BROWSER=1 cargo run --release
 ```
+
+설정값은 Rust `AppConfig` → `SimulatorConfig` → IPC `initialize` 메시지의 `reuse_browser` 키로 Python simulator에 전달된다. 단, Rust 쪽 IPC forwarding 변경은 별도 핸드오프 문서 `docs/plans/2026-05-27-simulator-reuse-env-rust-handoff.md`를 참고 — 이 변경이 머지되기 전까지 `.env`/inline 값은 Python까지 도달하지 않으며 simulator는 항상 비활성화 상태로 동작한다.
 
 기본 동작은 바꾸지 않았다. 기본값에서는 기존처럼 testcase마다 browser process를 새로 띄우고 닫는다.
 

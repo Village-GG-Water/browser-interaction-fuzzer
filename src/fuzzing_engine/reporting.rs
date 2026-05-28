@@ -37,6 +37,10 @@ impl Reporter {
         report!("[config] crash_dir={}", config.crash_dir.display());
         report!("[config] sancov_dir={}", config.sancov_dir.display());
         report!("[config] asan_dir={}", config.asan_dir.display());
+        report!(
+            "[config] simulator_response_timeout_ms={}",
+            config.simulator_response_timeout_ms
+        );
     }
 
     pub fn session_started(session_id: &str, crash_session_dir: &std::path::Path) {

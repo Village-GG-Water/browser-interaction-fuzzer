@@ -24,6 +24,7 @@ pub struct AppConfig {
     pub seed_actions: usize,
     pub max_iterations: Option<u64>,
     pub iteration_timeout_ms: u64,
+    pub simulator_response_timeout_ms: u64,
     pub action_timeout_ms: u64,
     pub page_ready_timeout_ms: u64,
     pub post_actions_settle_ms: u64,
@@ -65,6 +66,10 @@ impl AppConfig {
             )));
         }
 
+        let iteration_timeout_ms = u64_var(&vars, "ITERATION_TIMEOUT_MS", 12000);
+        let simulator_response_timeout_ms =
+            simulator_response_timeout_ms(&vars, iteration_timeout_ms);
+
         Ok(Self {
             dom_generator_dir: path_var(
                 &workspace_dir,
@@ -85,7 +90,8 @@ impl AppConfig {
             seed_inputs: usize_var(&vars, "SEED_INPUTS", 1),
             seed_actions: usize_var(&vars, "SEED_ACTIONS", 3),
             max_iterations: max_iterations(&vars),
-            iteration_timeout_ms: u64_var(&vars, "ITERATION_TIMEOUT_MS", 12000),
+            iteration_timeout_ms,
+            simulator_response_timeout_ms,
             action_timeout_ms: u64_var(&vars, "ACTION_TIMEOUT_MS", 300),
             page_ready_timeout_ms: u64_var(&vars, "PAGE_READY_TIMEOUT_MS", 120),
             post_actions_settle_ms: u64_var(&vars, "POST_ACTIONS_SETTLE_MS", 120),
@@ -170,6 +176,7 @@ fn overlay_environment(vars: &mut HashMap<String, String>) {
         "SEED_ACTIONS",
         "MAX_ITERATIONS",
         "ITERATION_TIMEOUT_MS",
+        "SIMULATOR_RESPONSE_TIMEOUT_MS",
         "ACTION_TIMEOUT_MS",
         "PAGE_READY_TIMEOUT_MS",
         "POST_ACTIONS_SETTLE_MS",
@@ -238,6 +245,14 @@ fn u64_var(vars: &HashMap<String, String>, key: &str, default: u64) -> u64 {
         .unwrap_or(default)
 }
 
+fn simulator_response_timeout_ms(vars: &HashMap<String, String>, iteration_timeout_ms: u64) -> u64 {
+    u64_var(
+        vars,
+        "SIMULATOR_RESPONSE_TIMEOUT_MS",
+        iteration_timeout_ms.saturating_add(5000),
+    )
+}
+
 fn max_iterations(vars: &HashMap<String, String>) -> Option<u64> {
     let value = u64_var(vars, "MAX_ITERATIONS", 0);
     if value == 0 { None } else { Some(value) }
@@ -252,5 +267,30 @@ fn bool_var(vars: &HashMap<String, String>, key: &str, default: bool) -> bool {
         "1" | "true" | "yes" | "y" | "on" => true,
         "0" | "false" | "no" | "n" | "off" => false,
         _ => default,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashMap;
+
+    use super::simulator_response_timeout_ms;
+
+    #[test]
+    fn simulator_response_timeout_defaults_to_iteration_plus_grace() {
+        let vars = HashMap::new();
+
+        assert_eq!(simulator_response_timeout_ms(&vars, 12_000), 17_000);
+    }
+
+    #[test]
+    fn simulator_response_timeout_honors_env_override() {
+        let mut vars = HashMap::new();
+        vars.insert(
+            "SIMULATOR_RESPONSE_TIMEOUT_MS".to_string(),
+            "3000".to_string(),
+        );
+
+        assert_eq!(simulator_response_timeout_ms(&vars, 12_000), 3_000);
     }
 }

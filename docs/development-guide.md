@@ -239,6 +239,8 @@ UI-only testcase는 `html_path = null`이고 `initial_url`을 사용합니다.
 
 `status` 값은 `ok`, `timeout`, `crash`, `error` 중 하나입니다. simulator `status="timeout"`만으로는 Rust crash objective에 들어가지 않고 timeout telemetry로 집계됩니다. 개별 action의 Playwright wait timeout은 가능한 경우 해당 action의 `ok=false`, `elapsed_ms`, `slow_actions` 신호로 남기고 testcase timeout으로 승격하지 않습니다. ASAN report가 있거나 simulator가 `status="crash"`를 반환한 경우에만 crash objective로 연결됩니다.
 
+Rust `clients/simulator.rs`는 `run_testcase` 요청 전체에 `SIMULATOR_RESPONSE_TIMEOUT_MS` watchdog을 적용합니다. 기본값은 `ITERATION_TIMEOUT_MS + 5000`입니다. 이 watchdog은 `browser.close()`, `new_context()`, `page.evaluate()` 같은 Playwright sync 호출이 반환하지 않아 JSON-lines 응답이 멈추는 infrastructure stall을 복구하기 위한 장치입니다. timeout이 발생하면 해당 worker는 simulator process tree를 종료하고 새 simulator를 initialize한 뒤, 그 iteration을 crash가 아니라 infra error로 기록합니다.
+
 ## Rust 모듈 책임
 
 - `actions.rs`: action data model과 JSON wire format.

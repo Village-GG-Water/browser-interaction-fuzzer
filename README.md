@@ -69,6 +69,8 @@ Rust engine은 LibAFL 기반입니다.
 
 `PARALLEL_WORKERS`를 2 이상으로 설정하면 parent process가 worker process들을 띄웁니다. 각 worker는 기존 LibAFL `fuzz_one` 흐름을 유지하고, `out/workers/<id>`와 `crashes/workers/<id>` 아래에 SanCov/ASAN/profile/crash artifact를 분리해서 저장합니다. v1에서는 worker-local corpus/coverage를 사용하며 raw coverage map을 실시간 공유하지 않습니다.
 
+`SIMULATOR_RESPONSE_TIMEOUT_MS`는 simulator IPC watchdog입니다. 기본값은 `ITERATION_TIMEOUT_MS + 5000`이며, Python simulator가 Playwright sync 호출이나 browser cleanup에서 JSON-lines 응답을 돌려주지 못하면 Rust worker가 simulator process tree를 종료하고 새 simulator를 띄운 뒤 해당 iteration을 infra error로 기록합니다. 이 값은 testcase semantic timeout이나 crash objective 기준이 아닙니다.
+
 crash artifact는 fuzzing engine 시작 시 부여된 session id 아래에 저장됩니다. simulator `status="timeout"`만 있는 입력은 기본적으로 이 디렉토리에 저장하지 않습니다.
 
 ```text

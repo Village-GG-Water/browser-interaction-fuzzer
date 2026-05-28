@@ -118,6 +118,7 @@ def browser_args(config: dict[str, Any]) -> list[str]:
         "--disable-background-networking",
         "--disable-default-apps",
         "--disable-sync",
+        "--disable-stack-profiler",
         "--disable-translate",
         "--hide-scrollbars",
         "--metrics-recording-only",

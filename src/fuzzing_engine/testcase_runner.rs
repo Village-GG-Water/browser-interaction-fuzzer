@@ -205,6 +205,7 @@ mod tests {
                 slow_actions: 0,
                 timings: IterationTimings::default(),
                 action_trace: Vec::new(),
+                browser_session: None,
             },
             new_coverage_edges: 0,
             hazard_summary: HazardSummary::default(),

@@ -6,6 +6,33 @@ use std::path::{Path, PathBuf};
 
 use super::{EngineResult, engine_error};
 
+const OVERLAY_ENV_KEYS: &[&str] = &[
+    "BROWSER_PATH",
+    "BROWSER_KIND",
+    "OUT_DIR",
+    "CRASH_DIR",
+    "INITIAL_SEED_DIR",
+    "SEED_DIR",
+    "DOM_GENERATOR_DIR",
+    "SIMULATOR_DIR",
+    "MAX_ACTIONS",
+    "SEED_INPUTS",
+    "SEED_ACTIONS",
+    "MAX_ITERATIONS",
+    "ITERATION_TIMEOUT_MS",
+    "SIMULATOR_RESPONSE_TIMEOUT_MS",
+    "ACTION_TIMEOUT_MS",
+    "PAGE_READY_TIMEOUT_MS",
+    "POST_ACTIONS_SETTLE_MS",
+    "INTER_ACTION_DELAY_MS",
+    "DISABLE_BREAKPAD",
+    "SIMULATOR_REUSE_BROWSER",
+    "ASAN_SYMBOLIZER_PATH",
+    "PARALLEL_WORKERS",
+    "WORKER_ID",
+    "WORKER_COUNT",
+];
+
 #[derive(Debug, Clone)]
 pub struct AppConfig {
     pub workspace_dir: PathBuf,
@@ -30,6 +57,7 @@ pub struct AppConfig {
     pub post_actions_settle_ms: u64,
     pub inter_action_delay_ms: u64,
     pub disable_breakpad: bool,
+    pub reuse_browser: bool,
     pub asan_symbolizer_path: Option<String>,
     pub parallel_workers: usize,
     pub worker_id: Option<usize>,
@@ -97,6 +125,7 @@ impl AppConfig {
             post_actions_settle_ms: u64_var(&vars, "POST_ACTIONS_SETTLE_MS", 120),
             inter_action_delay_ms: u64_var(&vars, "INTER_ACTION_DELAY_MS", 10),
             disable_breakpad: bool_var(&vars, "DISABLE_BREAKPAD", true),
+            reuse_browser: bool_var(&vars, "SIMULATOR_REUSE_BROWSER", false),
             asan_symbolizer_path: optional_var(&vars, "ASAN_SYMBOLIZER_PATH"),
             workspace_dir,
             out_dir,
@@ -162,31 +191,7 @@ fn read_dotenv(path: &PathBuf) -> EngineResult<HashMap<String, String>> {
 }
 
 fn overlay_environment(vars: &mut HashMap<String, String>) {
-    for key in [
-        "BROWSER_PATH",
-        "BROWSER_KIND",
-        "OUT_DIR",
-        "CRASH_DIR",
-        "INITIAL_SEED_DIR",
-        "SEED_DIR",
-        "DOM_GENERATOR_DIR",
-        "SIMULATOR_DIR",
-        "MAX_ACTIONS",
-        "SEED_INPUTS",
-        "SEED_ACTIONS",
-        "MAX_ITERATIONS",
-        "ITERATION_TIMEOUT_MS",
-        "SIMULATOR_RESPONSE_TIMEOUT_MS",
-        "ACTION_TIMEOUT_MS",
-        "PAGE_READY_TIMEOUT_MS",
-        "POST_ACTIONS_SETTLE_MS",
-        "INTER_ACTION_DELAY_MS",
-        "DISABLE_BREAKPAD",
-        "ASAN_SYMBOLIZER_PATH",
-        "PARALLEL_WORKERS",
-        "WORKER_ID",
-        "WORKER_COUNT",
-    ] {
+    for key in OVERLAY_ENV_KEYS {
         if let Ok(value) = env::var(key)
             && !value.trim().is_empty()
         {
@@ -274,7 +279,7 @@ fn bool_var(vars: &HashMap<String, String>, key: &str, default: bool) -> bool {
 mod tests {
     use std::collections::HashMap;
 
-    use super::simulator_response_timeout_ms;
+    use super::{OVERLAY_ENV_KEYS, simulator_response_timeout_ms};
 
     #[test]
     fn simulator_response_timeout_defaults_to_iteration_plus_grace() {
@@ -292,5 +297,10 @@ mod tests {
         );
 
         assert_eq!(simulator_response_timeout_ms(&vars, 12_000), 3_000);
+    }
+
+    #[test]
+    fn simulator_reuse_browser_allows_inline_env_override() {
+        assert!(OVERLAY_ENV_KEYS.contains(&"SIMULATOR_REUSE_BROWSER"));
     }
 }

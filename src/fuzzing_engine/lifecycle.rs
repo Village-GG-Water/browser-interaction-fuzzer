@@ -220,6 +220,7 @@ mod tests {
             selector_fallbacks: 0,
             slow_actions: 0,
             timings: Default::default(),
+            browser_session: None,
             action_trace: vec![
                 trace(0, "#victim", true, false, false),
                 trace(1, "#victim", false, false, false),

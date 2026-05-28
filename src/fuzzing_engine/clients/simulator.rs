@@ -28,6 +28,7 @@ pub struct SimulatorConfig {
     pub post_actions_settle_ms: u64,
     pub inter_action_delay_ms: u64,
     pub disable_breakpad: bool,
+    pub reuse_browser: bool,
     pub asan_symbolizer_path: Option<String>,
 }
 
@@ -48,6 +49,7 @@ impl SimulatorConfig {
             post_actions_settle_ms: config.post_actions_settle_ms,
             inter_action_delay_ms: config.inter_action_delay_ms,
             disable_breakpad: config.disable_breakpad,
+            reuse_browser: config.reuse_browser,
             asan_symbolizer_path: config.asan_symbolizer_path.clone(),
         }
     }
@@ -79,6 +81,26 @@ pub struct SimulatorResponse {
     pub timings: IterationTimings,
     #[serde(default)]
     pub action_trace: Vec<ActionTraceEntry>,
+    #[serde(default)]
+    pub browser_session: Option<BrowserSessionTrace>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BrowserSessionTrace {
+    #[serde(default)]
+    pub reuse_browser: bool,
+    #[serde(default)]
+    pub browser_reused: bool,
+    #[serde(default)]
+    pub browser_launch_id: u64,
+    #[serde(default)]
+    pub context_id: u64,
+    #[serde(default)]
+    pub open_contexts_after_open: Option<u64>,
+    #[serde(default)]
+    pub open_contexts_after_close: Option<u64>,
+    #[serde(default)]
+    pub discarded_browser: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -168,22 +190,7 @@ impl SimulatorClient {
     }
 
     fn initialize(&mut self) -> EngineResult<()> {
-        self.send(&serde_json::json!({
-            "cmd": "initialize",
-            "protocol_version": 1,
-            "browser_path": &self.config.browser_path,
-            "browser_kind": &self.config.browser_kind,
-            "sancov_dir": self.config.sancov_dir.to_string_lossy(),
-            "asan_dir": self.config.asan_dir.to_string_lossy(),
-            "out_dir": self.config.out_dir.to_string_lossy(),
-            "iteration_timeout_ms": self.config.iteration_timeout_ms,
-            "action_timeout_ms": self.config.action_timeout_ms,
-            "page_ready_timeout_ms": self.config.page_ready_timeout_ms,
-            "post_actions_settle_ms": self.config.post_actions_settle_ms,
-            "inter_action_delay_ms": self.config.inter_action_delay_ms,
-            "disable_breakpad": self.config.disable_breakpad,
-            "asan_symbolizer_path": &self.config.asan_symbolizer_path,
-        }))?;
+        self.send(&initialize_message(&self.config))?;
         let response: SimulatorResponse =
             self.response_with_timeout("initialize", self.response_timeout())?;
         if response.status != "ok" {
@@ -267,6 +274,26 @@ impl SimulatorClient {
     fn response_timeout(&self) -> Duration {
         Duration::from_millis(self.config.simulator_response_timeout_ms)
     }
+}
+
+fn initialize_message(config: &SimulatorConfig) -> serde_json::Value {
+    serde_json::json!({
+        "cmd": "initialize",
+        "protocol_version": 1,
+        "browser_path": &config.browser_path,
+        "browser_kind": &config.browser_kind,
+        "sancov_dir": config.sancov_dir.to_string_lossy(),
+        "asan_dir": config.asan_dir.to_string_lossy(),
+        "out_dir": config.out_dir.to_string_lossy(),
+        "iteration_timeout_ms": config.iteration_timeout_ms,
+        "action_timeout_ms": config.action_timeout_ms,
+        "page_ready_timeout_ms": config.page_ready_timeout_ms,
+        "post_actions_settle_ms": config.post_actions_settle_ms,
+        "inter_action_delay_ms": config.inter_action_delay_ms,
+        "disable_breakpad": config.disable_breakpad,
+        "reuse_browser": config.reuse_browser,
+        "asan_symbolizer_path": &config.asan_symbolizer_path,
+    })
 }
 
 fn reason_without_label<'a>(label: &str, reason: &'a str) -> &'a str {
@@ -388,4 +415,39 @@ fn wait_then_kill(child: &mut Child) {
 
 pub fn optional_path_string(path: Option<&Path>) -> Option<String> {
     path.map(|path| path.to_string_lossy().to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use std::path::PathBuf;
+
+    use super::{SimulatorConfig, initialize_message};
+
+    #[test]
+    fn initialize_message_forwards_reuse_browser() {
+        let config = SimulatorConfig {
+            simulator_dir: PathBuf::from("src/user-interaction-simulator"),
+            uv_cache_dir: PathBuf::from("out/uv-cache"),
+            browser_path: "C:\\browser\\chrome.exe".to_string(),
+            browser_kind: "chromium".to_string(),
+            sancov_dir: PathBuf::from("out/sancov"),
+            asan_dir: PathBuf::from("out/asan"),
+            out_dir: PathBuf::from("out"),
+            iteration_timeout_ms: 12_000,
+            simulator_response_timeout_ms: 17_000,
+            action_timeout_ms: 300,
+            page_ready_timeout_ms: 120,
+            post_actions_settle_ms: 120,
+            inter_action_delay_ms: 10,
+            disable_breakpad: true,
+            reuse_browser: true,
+            asan_symbolizer_path: None,
+        };
+
+        let message = initialize_message(&config);
+
+        assert_eq!(message["cmd"], "initialize");
+        assert_eq!(message["reuse_browser"], true);
+        assert_eq!(message["disable_breakpad"], true);
+    }
 }

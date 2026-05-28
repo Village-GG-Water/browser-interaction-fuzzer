@@ -1,12 +1,14 @@
 # Rust-side handoff: forward `SIMULATOR_REUSE_BROWSER` through IPC
 
+상태: Rust-side forwarding 적용됨. `SIMULATOR_REUSE_BROWSER`는 `.env` 또는 inline env에서 `AppConfig`로 읽히고, `SimulatorConfig`를 거쳐 simulator `initialize` IPC의 `reuse_browser` 키로 전달된다.
+
 ## 배경
 
 Python simulator는 더 이상 `os.environ["SIMULATOR_REUSE_BROWSER"]`를 직접 읽지 않는다 (`src/user-interaction-simulator/browser_env.py`). 대신 `initialize` IPC 메시지의 `reuse_browser` 키를 사용한다.
 
-다른 simulator 설정과 동일한 경로 (`.env` → Rust `AppConfig` → `SimulatorConfig` → JSON IPC → Python config dict) 를 완성하기 위해 Rust 쪽 변경이 필요하다. 이 변경이 머지되기 전까지는 `.env`나 inline env 의 `SIMULATOR_REUSE_BROWSER`가 무시되고 Python은 항상 `reuse_browser=false` 로 동작한다.
+다른 simulator 설정과 동일한 경로 (`.env` → Rust `AppConfig` → `SimulatorConfig` → JSON IPC → Python config dict) 로 전달된다. 이 경로가 없으면 `.env`나 inline env 의 `SIMULATOR_REUSE_BROWSER`가 Python까지 도달하지 않아 simulator가 항상 `reuse_browser=false` 로 동작한다.
 
-## 필요한 Rust 변경
+## 적용된 Rust 변경
 
 ### 1. `src/fuzzing_engine/config.rs`
 

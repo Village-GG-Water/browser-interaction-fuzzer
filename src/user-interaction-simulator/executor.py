@@ -59,7 +59,12 @@ def run_testcase(browser_session: BrowserSession, config: dict[str, Any], messag
     def finish(status: str, reason: str | None = None) -> dict[str, Any]:
         timings["simulator_total_ms"] = elapsed_ms(started)
         timings["iteration_total_ms"] = timings["simulator_total_ms"]
-        response = {"status": status, "timings": timings, **action_stats}
+        response = {
+            "status": status,
+            "timings": timings,
+            **action_stats,
+            "browser_session": browser_session.diagnostics(),
+        }
         if reason is not None:
             response["reason"] = reason[:500]
         return response

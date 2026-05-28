@@ -18,14 +18,28 @@ class BrowserSession:
         self.config = config
         self.reuse_browser = bool(config.get("reuse_browser"))
         self.browser: Browser | None = None
+        self.browser_launch_id = 0
+        self.context_id = 0
+        self.last_open_info: dict[str, Any] = {}
+        self.last_close_info: dict[str, Any] = {}
 
     def open_context(self, profile_dir: Path) -> tuple[Browser, BrowserContext]:
+        self.last_open_info = {}
+        self.last_close_info = {}
         if not self.reuse_browser:
-            return launch_context(self.pw, self.config, profile_dir)
+            browser = launch_browser(self.pw, self.config)
+            self.browser_launch_id += 1
+            context = browser.new_context()
+            self._record_open(browser, reused_existing_browser=False)
+            return browser, context
 
+        reused_existing_browser = self.browser is not None and is_browser_connected(self.browser)
         if self.browser is None or not is_browser_connected(self.browser):
             self.browser = launch_browser(self.pw, self.config)
-        return self.browser, self.browser.new_context()
+            self.browser_launch_id += 1
+        context = self.browser.new_context()
+        self._record_open(self.browser, reused_existing_browser=reused_existing_browser)
+        return self.browser, context
 
     def close_context(
         self,
@@ -40,6 +54,10 @@ class BrowserSession:
             profile_dir,
             close_browser=(not self.reuse_browser) or discard_browser,
         )
+        self.last_close_info = {
+            "open_contexts_after_close": open_context_count(browser),
+            "discarded_browser": bool(discard_browser),
+        }
         if discard_browser and browser is self.browser:
             self.browser = None
 
@@ -50,6 +68,23 @@ class BrowserSession:
             except Exception:
                 pass
             self.browser = None
+
+    def diagnostics(self) -> dict[str, Any]:
+        return {
+            **self.last_open_info,
+            **self.last_close_info,
+        }
+
+    def _record_open(self, browser: Browser, reused_existing_browser: bool) -> None:
+        self.context_id += 1
+        self.last_close_info = {}
+        self.last_open_info = {
+            "reuse_browser": self.reuse_browser,
+            "browser_reused": bool(reused_existing_browser),
+            "browser_launch_id": self.browser_launch_id,
+            "context_id": self.context_id,
+            "open_contexts_after_open": open_context_count(browser),
+        }
 
 def launch_context(pw: Playwright, config: dict[str, Any], profile_dir: Path) -> tuple[Browser, BrowserContext]:
     browser = launch_browser(pw, config)
@@ -85,6 +120,14 @@ def close_context(
         except Exception:
             pass
     shutil.rmtree(profile_dir, ignore_errors=True)
+
+def open_context_count(browser: Browser | None) -> int | None:
+    if browser is None:
+        return None
+    try:
+        return len(browser.contexts)
+    except Exception:
+        return None
 
 def is_browser_connected(browser: Browser) -> bool:
     try:

@@ -36,10 +36,17 @@ class _Element:
 
 
 class TestExecuteActionExceptionClassification(unittest.TestCase):
-    def test_re_raises_timeout_errors_for_run_testcase_classification(self):
+    def test_keeps_action_timeout_errors_as_action_failures(self):
         with patch(
             "user_interaction_simulator.executor.resolve_dom_target",
             return_value=(_Element(PlaywrightTimeoutError("click timeout")), 0),
+        ):
+            self.assertEqual(execute_action(None, {"kind": "click"}, 300, {}, None), (False, 0))
+
+    def test_re_raises_iteration_timeout_for_run_testcase_classification(self):
+        with patch(
+            "user_interaction_simulator.executor.resolve_dom_target",
+            return_value=(_Element(PlaywrightTimeoutError("iteration timeout")), 0),
         ):
             with self.assertRaises(PlaywrightTimeoutError):
                 execute_action(None, {"kind": "click"}, 300, {}, None)

@@ -27,6 +27,7 @@ pub struct RunMetrics {
     pub new_coverage_events: u64,
     pub new_hazard_events: u64,
     pub crashes: u64,
+    pub timeouts: u64,
     pub infra_errors: u64,
     pub last_actions: usize,
     pub last_action_successes: u64,

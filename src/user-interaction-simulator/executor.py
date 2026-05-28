@@ -294,8 +294,11 @@ def execute_action(
             sleep_with_deadline(int(action.get("millis") or 1), deadline)
             return True, 0
     except Exception as exc:
-        if is_timeout_error(exc) or is_crash_error(exc):
+        if is_iteration_timeout_error(exc) or is_crash_error(exc):
             raise
+        if is_timeout_error(exc):
+            logging.debug(f"action {kind!r} timed out: {exc}")
+            return False, 0
         logging.debug(f"action {kind!r} failed: {exc}")
         return False, 0
 
@@ -317,6 +320,10 @@ def is_crash_error(exc: Exception) -> bool:
 
 def is_timeout_error(exc: Exception) -> bool:
     return isinstance(exc, PlaywrightTimeoutError) or "timeout" in str(exc).lower()
+
+
+def is_iteration_timeout_error(exc: Exception) -> bool:
+    return is_timeout_error(exc) and "iteration timeout" in str(exc).lower()
 
 
 def iteration_deadline(started: float, config: dict[str, Any]) -> float | None:

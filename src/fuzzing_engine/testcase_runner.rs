@@ -27,11 +27,9 @@ pub struct ExecutionOutcome {
 }
 
 impl ExecutionOutcome {
-    pub fn crash_type(&self) -> Option<CrashType> {
+    pub fn objective_crash_type(&self) -> Option<CrashType> {
         if let Some(crash) = &self.classified_crash {
             Some(crash.crash_type)
-        } else if self.timed_out {
-            Some(CrashType::Timeout)
         } else if self.response.status == "crash" {
             Some(CrashType::Unknown)
         } else {
@@ -39,8 +37,12 @@ impl ExecutionOutcome {
         }
     }
 
+    pub fn crash_type(&self) -> Option<CrashType> {
+        self.objective_crash_type()
+    }
+
     pub fn is_crash(&self) -> bool {
-        self.crash_type().is_some()
+        self.objective_crash_type().is_some()
     }
 }
 
@@ -184,4 +186,79 @@ pub fn save_crash_artifacts(
 
 fn elapsed_ms(started: Instant) -> u64 {
     started.elapsed().as_millis().try_into().unwrap_or(u64::MAX)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::super::crash::AsanReport;
+    use super::super::metrics::IterationTimings;
+    use super::*;
+
+    fn outcome(status: &str, classified_crash: Option<ClassifiedCrash>) -> ExecutionOutcome {
+        ExecutionOutcome {
+            response: SimulatorResponse {
+                status: status.to_string(),
+                reason: None,
+                actions_attempted: 0,
+                actions_succeeded: 0,
+                selector_fallbacks: 0,
+                slow_actions: 0,
+                timings: IterationTimings::default(),
+                action_trace: Vec::new(),
+            },
+            new_coverage_edges: 0,
+            hazard_summary: HazardSummary::default(),
+            classified_crash,
+            timed_out: status == "timeout",
+        }
+    }
+
+    fn classified_crash(crash_type: CrashType) -> ClassifiedCrash {
+        ClassifiedCrash {
+            crash_type,
+            stack_hash: 0,
+            report: AsanReport {
+                source: "asan.log".to_string(),
+                excerpt: "ERROR: AddressSanitizer".to_string(),
+            },
+        }
+    }
+
+    #[test]
+    fn bare_timeout_is_not_an_objective_crash() {
+        let outcome = outcome("timeout", None);
+
+        assert!(!outcome.is_crash());
+        assert_eq!(outcome.objective_crash_type(), None);
+    }
+
+    #[test]
+    fn timeout_with_asan_report_is_an_objective_crash() {
+        let outcome = outcome(
+            "timeout",
+            Some(classified_crash(CrashType::HeapUseAfterFree)),
+        );
+
+        assert!(outcome.is_crash());
+        assert_eq!(
+            outcome.objective_crash_type(),
+            Some(CrashType::HeapUseAfterFree)
+        );
+    }
+
+    #[test]
+    fn simulator_crash_status_is_an_objective_crash() {
+        let outcome = outcome("crash", None);
+
+        assert!(outcome.is_crash());
+        assert_eq!(outcome.objective_crash_type(), Some(CrashType::Unknown));
+    }
+
+    #[test]
+    fn ok_status_is_not_an_objective_crash() {
+        let outcome = outcome("ok", None);
+
+        assert!(!outcome.is_crash());
+        assert_eq!(outcome.objective_crash_type(), None);
+    }
 }

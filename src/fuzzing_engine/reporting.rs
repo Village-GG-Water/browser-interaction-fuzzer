@@ -73,12 +73,13 @@ impl Reporter {
 
     pub fn progress(metrics: &RunMetrics) {
         report!(
-            "[progress] iter={} corpus={} new_cov={} new_hazard={} crashes={} infra={} actions={} ok_actions={} fallbacks={} slow_actions={} stale_reuse={}{}{}",
+            "[progress] iter={} corpus={} new_cov={} new_hazard={} crashes={} timeouts={} infra={} actions={} ok_actions={} fallbacks={} slow_actions={} stale_reuse={}{}{}",
             metrics.iterations,
             metrics.corpus_size,
             metrics.new_coverage_events,
             metrics.new_hazard_events,
             metrics.crashes,
+            metrics.timeouts,
             metrics.infra_errors,
             metrics.last_actions,
             metrics.last_action_successes,
@@ -116,12 +117,13 @@ impl Reporter {
 
     pub fn summary(metrics: &RunMetrics) {
         report!(
-            "[summary] iter={} corpus={} new_cov={} new_hazard={} crashes={} infra={}{}{}",
+            "[summary] iter={} corpus={} new_cov={} new_hazard={} crashes={} timeouts={} infra={}{}{}",
             metrics.iterations,
             metrics.corpus_size,
             metrics.new_coverage_events,
             metrics.new_hazard_events,
             metrics.crashes,
+            metrics.timeouts,
             metrics.infra_errors,
             hazard_suffix(metrics),
             policy_suffix(metrics),

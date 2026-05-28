@@ -444,6 +444,10 @@ fn record_outcome(
         metrics.policy_snapshot = Some(policy.snapshot());
     }
 
+    if outcome.timed_out {
+        metrics.timeouts += 1;
+    }
+
     if outcome.is_crash() {
         metrics.crashes += 1;
         let case_dir = save_crash_artifacts(
